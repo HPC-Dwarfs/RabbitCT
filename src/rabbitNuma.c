@@ -92,73 +92,83 @@ static void setConfiguredNodes(void)
 static void nodeMeminfo(int node, uint32_t *totalMemory, uint32_t *freeMemory)
 {
   FILE *fp;
-  bstring filename;
-  bstring totalString = bformat("MemTotal:");
-  bstring freeString  = bformat("MemFree:");
-  int i;
+  char filename[256];
+  char line[256];
 
-  filename = bformat("/sys/devices/system/node/node%d/meminfo", node);
+  snprintf(filename, sizeof(filename),
+      "/sys/devices/system/node/node%d/meminfo",
+      node);
 
-  if (NULL != (fp = fopen(bdata(filename), "r"))) {
-    bstring src             = bread((bNread)fread, fp);
-    struct bstrList *tokens = bsplit(src, (char)'\n');
-
-    for (i = 0; i < tokens->qty; i++) {
-      if (binstr(tokens->entry[i], 0, totalString) != BSTR_ERR) {
-        bstring tmp = bmidstr(tokens->entry[i], 18, blength(tokens->entry[i]) - 18);
-        bltrimws(tmp);
-        struct bstrList *subtokens = bsplit(tmp, (char)' ');
-        *totalMemory               = str2int(bdata(subtokens->entry[0]));
-      } else if (binstr(tokens->entry[i], 0, freeString) != BSTR_ERR) {
-        bstring tmp = bmidstr(tokens->entry[i], 18, blength(tokens->entry[i]) - 18);
-        bltrimws(tmp);
-        struct bstrList *subtokens = bsplit(tmp, (char)' ');
-        *freeMemory                = str2int(bdata(subtokens->entry[0]));
+  if (NULL != (fp = fopen(filename, "r"))) {
+    while (fgets(line, sizeof(line), fp)) {
+      unsigned long val = 0;
+      if (strstr(line, "MemTotal:") && sscanf(line + 18, "%lu", &val) == 1) {
+        *totalMemory = (uint32_t)val;
+      } else if (strstr(line, "MemFree:") && sscanf(line + 18, "%lu", &val) == 1) {
+        *freeMemory = (uint32_t)val;
       }
     }
+    fclose(fp);
   } else {
     ERROR;
   }
-
-  fclose(fp);
 }
 
 static int nodeProcessorList(int node, uint32_t **list)
 {
   FILE *fp;
-  bstring filename;
-  int count = 0;
-  bstring src;
-  int i, j;
-  struct bstrList *tokens;
-  unsigned long val;
-  char *endptr;
+  char filename[256];
+  char buf[4096];
+  int count    = 0;
   int cursor   = 0;
-  int unitSize = (int)32; /* 8 nibbles */
+  int unitSize = 32; /* 8 nibbles */
 
-  *list        = (uint32_t *)malloc(MAX_NUM_THREADS * sizeof(uint32_t));
+  *list = (uint32_t *)malloc(MAX_NUM_THREADS * sizeof(uint32_t));
 
   /* the cpumap interface should be always there */
-  filename = bformat("/sys/devices/system/node/node%d/cpumap", node);
+  snprintf(filename, sizeof(filename),
+      "/sys/devices/system/node/node%d/cpumap",
+      node);
 
-  if (NULL != (fp = fopen(bdata(filename), "r"))) {
+  if (NULL != (fp = fopen(filename, "r"))) {
+    if (fgets(buf, sizeof(buf), fp) == NULL) {
+      fclose(fp);
+      return -1;
+    }
+    fclose(fp);
 
-    src    = bread((bNread)fread, fp);
-    tokens = bsplit(src, ',');
+    /* parse comma-separated hex words from right to left */
+    int len = (int)strlen(buf);
+    /* strip trailing whitespace/newline */
+    while (len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r' ||
+                          buf[len - 1] == ' ')) {
+      buf[--len] = '\0';
+    }
 
-    for (i = (tokens->qty - 1); i >= 0; i--) {
-      val = strtoul((char *)tokens->entry[i]->data, &endptr, 16);
+    /* split on commas, collect token pointers in reverse order */
+    char *tokens[256];
+    int ntokens    = 0;
+    char *saveptr  = NULL;
+    char *tok      = strtok_r(buf, ",", &saveptr);
+    while (tok && ntokens < 256) {
+      tokens[ntokens++] = tok;
+      tok               = strtok_r(NULL, ",", &saveptr);
+    }
+
+    for (int i = ntokens - 1; i >= 0; i--) {
+      char *endptr       = NULL;
+      unsigned long val  = strtoul(tokens[i], &endptr, 16);
 
       if ((errno != 0 && val == LONG_MAX) || (errno != 0 && val == 0)) {
         ERROR;
       }
 
-      if (endptr == (char *)tokens->entry[i]->data) {
+      if (endptr == tokens[i]) {
         ERROR_MSG(No digits were found);
       }
 
       if (val != 0UL) {
-        for (j = 0; j < unitSize; j++) {
+        for (int j = 0; j < unitSize; j++) {
           if (val & (1UL << j)) {
             if (count < MAX_NUM_THREADS) {
               (*list)[count] = (j + cursor);
@@ -172,10 +182,6 @@ static int nodeProcessorList(int node, uint32_t **list)
       cursor += unitSize;
     }
 
-    bstrListDestroy(tokens);
-    bdestroy(src);
-    bdestroy(filename);
-    fclose(fp);
     return count;
   }
 

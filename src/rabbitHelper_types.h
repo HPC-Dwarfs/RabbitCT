@@ -9,7 +9,6 @@
 #include <stdint.h>
 
 #include "analyseGeometry_types.h"
-#include "bstrlib.h"
 #include "memoryUtils_types.h"
 #include "rabbitAffinity_types.h"
 #include "rabbitCt.h"

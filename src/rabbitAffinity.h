@@ -13,7 +13,7 @@ extern int rabbitAffinity_processGetProcessorId();
 extern int rabbitAffinity_threadGetProcessorId();
 extern void rabbitAffinity_pinProcess(int processorId);
 extern void rabbitAffinity_pinThread(int processorId);
-extern const AffinityDomainType *rabbitAffinity_getDomain(bstring domain);
+extern const AffinityDomainType *rabbitAffinity_getDomain(const char *domain);
 extern void rabbitAffinity_printDomains();
 
 #endif /*RABBITAFFINITY_H*/
