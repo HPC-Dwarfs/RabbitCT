@@ -28,10 +28,8 @@ typedef struct {
 
 #define FNCSIGN extern "C"
 
-#define RCT_FNCN_LOADALGORITHM "RCTLoadAlgorithm"
 #define RCT_FNCN_PREPAREALGORITHM "RCTPrepareAlgorithm"
 #define RCT_FNCN_ALGORITHMBACKPROJ "RCTAlgorithmBackprojection"
-#define RCT_FNCN_UNLOADALGORITHM "RCTUnloadAlgorithm"
 #define RCT_FNCN_FINISHALGORITHM "RCTFinishAlgorithm"
 
 #endif

@@ -9,10 +9,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "algorithmRegistry.h"
 #include "ctFileReader.h"
 #include "likwid-marker.h"
 #include "memoryUtils.h"
-#include "algorithmRegistry.h"
 #include "rabbitProgress.h"
 #include "rabbitTimer.h"
 #include "types.h"
@@ -139,7 +139,7 @@ int main(int argc, char **argv)
   /********************************************************
    * LOAD ALGORITHM
    * *****************************************************/
-  if (!algorithmRegistry_find(modulePath)) {
+  if (!algorithmRegistryFind(modulePath)) {
     exit(EXIT_FAILURE);
   }
 
@@ -178,11 +178,11 @@ int main(int argc, char **argv)
   /********************************************************
    * PREPARE ALGORITHM
    * *****************************************************/
-  if (s_fncPrepareAlgorithm != NULL) {
+  if (FncPrepareAlgorithm != NULL) {
     CyclesData cycleData;
 
     rabbitTimer_startCycles(&cycleData);
-    s_fncPrepareAlgorithm(&data);
+    FncPrepareAlgorithm(&data);
     rabbitTimer_stopCycles(&cycleData);
 
     if (optVerbose) {
@@ -190,8 +190,6 @@ int main(int argc, char **argv)
           (double)rabbitTimer_printCyclesTime(&cycleData) / (double)1000000.0);
     }
   }
-
-  s_fncLoadAlgorithm(&data);
 
   /********************************************************
    * BACKPROJECTION LOOP
@@ -234,7 +232,7 @@ int main(int argc, char **argv)
             &inputFile, data.projectionBuffer[i].matrix, data.projectionBuffer[i].image);
       }
       rabbitTimer_startCycles(&cycleData);
-      s_fncAlgorithmIteration(&data);
+      FncAlgorithmIteration(&data);
       rabbitTimer_stopCycles(&cycleData);
       time += rabbitTimer_printCyclesTime(&cycleData);
 
@@ -243,7 +241,7 @@ int main(int argc, char **argv)
     }
   }
 
-  s_fncFinishAlgorithm(&data);
+  FncFinishAlgorithm(&data);
 
   /********************************************************
    * OPTIONAL VERIFY RESULT

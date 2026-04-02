@@ -5,23 +5,19 @@
 #ifndef ALGORITHMREGISTRY_H
 #define ALGORITHMREGISTRY_H
 
-#include "types.h"
+#include "moduleLoader_types.h"
 
 typedef struct {
-    const char             *name;
-    TfncLoadAlgorithm       load;
-    TfncPrepareAlgorithm    prepare;
-    TfncAlgorithmIteration  iterate;
-    TfncFinishAlgorithm     finish;
-    TfncUnloadAlgorithm     unload;
-} AlgorithmEntry;
+  const char *name;
+  FncPrepareAlgorithmType prepare;
+  FncAlgorithmIterationType iterate;
+  FncFinishAlgorithmType finish;
+} AlgorithmEntryType;
 
-extern TfncLoadAlgorithm      s_fncLoadAlgorithm;
-extern TfncPrepareAlgorithm   s_fncPrepareAlgorithm;
-extern TfncAlgorithmIteration s_fncAlgorithmIteration;
-extern TfncFinishAlgorithm    s_fncFinishAlgorithm;
-extern TfncUnloadAlgorithm    s_fncUnloadAlgorithm;
+extern FncPrepareAlgorithmType FncPrepareAlgorithm;
+extern FncAlgorithmIterationType FncAlgorithmIteration;
+extern FncFinishAlgorithmType FncFinishAlgorithm;
 
-extern int algorithmRegistry_find(const char *name);
+extern int algorithmRegistryFind(const char *name);
 
 #endif

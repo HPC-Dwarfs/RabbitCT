@@ -58,3 +58,4 @@ config.mk
 /compile_commands.json
 /RabbitInput
 /rabbitRunner-*
+/result.rctd
