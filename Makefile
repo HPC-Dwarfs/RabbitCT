@@ -25,7 +25,7 @@ endif
 include config.mk
 include $(MAKE_DIR)/include_$(TOOLCHAIN).mk
 include $(MAKE_DIR)/include_LIKWID.mk
-INCLUDES  += -I$(SRC_DIR)/includes -I$(BUILD_DIR)
+INCLUDES  += -I$(SRC_DIR)/includes -I$(SRC_DIR) -I$(BUILD_DIR)
 
 VPATH     = $(SRC_DIR)
 ASM       = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.s,$(wildcard $(SRC_DIR)/*.c))
@@ -53,6 +53,7 @@ $(BUILD_DIR)/%.o:  %.c $(MAKE_DIR)/include_$(TOOLCHAIN).mk config.mk
 $(BUILD_DIR)/%.s:  %.c
 	$(info ===>  GENERATE ASM  $@)
 	$(CC) -S $(CPPFLAGS) $(CFLAGS) $< -o $@
+
 
 .PHONY: clean distclean info asm format
 

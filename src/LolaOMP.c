@@ -1,9 +1,11 @@
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <analyseGeometry.h>
-#include <likwid.h>
+#include <likwid-marker.h>
 #include <memoryUtils.h>
 #include <rabbitCt.h>
 #include <rabbitHelper_types.h>
@@ -17,13 +19,13 @@
 
 static OutShadow shadow;
 static LineRange **Range;
-static ZeroPadding padding;
+static ZeroPaddingType padding;
 static float *paddedImg;
 static uint64_t voxels_clipping = 0, voxels_actual = 0;
 
-int RCTLoadAlgorithm(RabbitCtGlobalData *rcgd) { return 1; }
+int LolaREF_Load(RabbitCtGlobalData *rcgd) { return 1; }
 
-int RCTFinishAlgorithm(RabbitCtGlobalData *rcgd) {
+int LolaREF_Finish(RabbitCtGlobalData *rcgd) {
   const int L = rcgd->problemSize;
   uint64_t total = (uint64_t)L * (uint64_t)L * (uint64_t)L * 496UL;
   printf("RCTFinishAlgorithm(): clipping stats:\n");
@@ -32,7 +34,7 @@ int RCTFinishAlgorithm(RabbitCtGlobalData *rcgd) {
   printf("Actual Volume Voxels: %lu\n", voxels_actual);
 }
 
-int RCTPrepareAlgorithm(RabbitCtGlobalData *rcgd) {
+int LolaREF_Prepare(RabbitCtGlobalData *rcgd) {
   /* numberOfProjections is set to N in main if -a was given */
   if (rcgd->numberOfProjections == 0) {
     fprintf(stderr, "This module needs global geometry information.\n"
@@ -66,9 +68,9 @@ int RCTPrepareAlgorithm(RabbitCtGlobalData *rcgd) {
   return 1;
 }
 
-int RCTUnloadAlgorithm(RabbitCtGlobalData *rcgd) { return 1; }
+int LolaREF_Unload(RabbitCtGlobalData *rcgd) { return 1; }
 
-int RCTAlgorithmBackprojection(RabbitCtGlobalData *rcgd) {
+int LolaREF_Backprojection(RabbitCtGlobalData *rcgd) {
   const int L = rcgd->problemSize;
   const int P = rcgd->numberOfProjections; // projections in this run
   const float MM = rcgd->voxelSize;

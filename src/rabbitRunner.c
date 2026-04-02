@@ -10,9 +10,9 @@
 #include <unistd.h>
 
 #include "ctFileReader.h"
-#include "likwid.h"
+#include "likwid-marker.h"
 #include "memoryUtils.h"
-#include "moduleLoader.h"
+#include "algorithmRegistry.h"
 #include "rabbitProgress.h"
 #include "rabbitTimer.h"
 #include "types.h"
@@ -32,7 +32,7 @@
   printf("-c\t check error\n");                                                          \
   printf("-C\t Specify line clipping filename\n");                                       \
   printf("-o\t output volume image\n");                                                  \
-  printf("-m\t module path\n\n")
+  printf("-m\t algorithm name (e.g. LolaREF)\n\n")
 
 static float volumeResolution(const int problemSize)
 {
@@ -139,7 +139,7 @@ int main(int argc, char **argv)
   /********************************************************
    * LOAD ALGORITHM
    * *****************************************************/
-  if (!moduleLoader_loadSharedLibrary(modulePath)) {
+  if (!algorithmRegistry_find(modulePath)) {
     exit(EXIT_FAILURE);
   }
 
