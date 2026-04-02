@@ -1,67 +1,88 @@
-TARGETS   = RabbitHelper
-TARGETS  := $(TARGETS) RabbitRunner
-ifdef MIC
-TARGETS  := $(TARGETS) LolaMIC-OMP-scalar
-TARGETS  := $(TARGETS) LolaMIC-OMP-autovec
-TARGETS  := $(TARGETS) LolaMIC-OMP-pragmasimd
-TARGETS  := $(TARGETS) LolaMIC-INTRIN
-TARGETS  := $(TARGETS) LolaMIC-ASM
-TARGETS  := $(TARGETS) LolaMIC-ISPC
-else
-TARGETS  := $(TARGETS) LolaOMPSSE-V1
-TARGETS  := $(TARGETS) LolaOMPSSE-V2
-TARGETS  := $(TARGETS) LolaOMPAVX
-TARGETS  := $(TARGETS) LolaOMPAVX2-gather
-TARGETS  := $(TARGETS) LolaOMPAVX2-pairwise
-TARGETS  := $(TARGETS) LolaISPC-sse2-i32x4
-TARGETS  := $(TARGETS) LolaISPC-sse2-i32x8
-TARGETS  := $(TARGETS) LolaISPC-avx1.1-i32x8
-TARGETS  := $(TARGETS) LolaISPC-avx1.1-i32x16
-TARGETS  := $(TARGETS) LolaISPC-avx2-i32x8
-TARGETS  := $(TARGETS) LolaISPC-avx2-i32x16
-TARGETS  := $(TARGETS) LolaISPC-avx-tasks
-TARGETS  := $(TARGETS) LolaOMP-scalar-SSE
-TARGETS  := $(TARGETS) LolaOMP-scalar-AVX
-TARGETS  := $(TARGETS) LolaOMP-scalar-AVX2
-TARGETS  := $(TARGETS) LolaOMP-autovec-SSE
-TARGETS  := $(TARGETS) LolaOMP-autovec-AVX
-TARGETS  := $(TARGETS) LolaOMP-autovec-AVX2
-TARGETS  := $(TARGETS) LolaOMP-pragmasimd-SSE
-TARGETS  := $(TARGETS) LolaOMP-pragmasimd-AVX
-TARGETS  := $(TARGETS) LolaOMP-pragmasimd-AVX2
+# Copyright (C) NHR@FAU, University Erlangen-Nuremberg.
+# All rights reserved. This file is part of RabbitCT.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
+
+#CONFIGURE BUILD SYSTEM
+TARGET	   = rabbitRunner-$(TOOLCHAIN)
+BUILD_DIR  = ./build/$(TOOLCHAIN)
+SRC_DIR    = ./src
+MAKE_DIR   = ./mk
+Q         ?= @
+
+#DO NOT EDIT BELOW
+ifeq (,$(wildcard config.mk))
+$(info )
+$(info ====================================================================)
+$(info config.mk does not exist!)
+$(info Creating config.mk from ./mk/config-default.mk)
+$(info Please adapt config.mk to your needs and run make again.)
+$(info ====================================================================)
+$(info )
+$(shell cp ./mk/config-default.mk config.mk)
+$(error Stopping after creating config.mk - please review and run make again)
 endif
+include config.mk
+include $(MAKE_DIR)/include_$(TOOLCHAIN).mk
+include $(MAKE_DIR)/include_LIKWID.mk
+INCLUDES  += -I$(SRC_DIR)/includes -I$(BUILD_DIR)
 
-export COMPILER=ICC
+VPATH     = $(SRC_DIR)
+ASM       = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.s,$(wildcard $(SRC_DIR)/*.c))
+OBJ       = $(filter-out $(BUILD_DIR)/kernels-%.o,$(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o,$(wildcard $(SRC_DIR)/*.c)))
+SRC       =  $(wildcard $(SRC_DIR)/*.h $(SRC_DIR)/*.c)
+CPPFLAGS := $(CPPFLAGS) $(DEFINES) $(OPTIONS) $(INCLUDES)
+c := ,
+clist = $(subst $(eval) ,$c,$(strip $1))
 
-all:  $(TARGETS) end
+define CLANGD_TEMPLATE
+CompileFlags:
+  Add: [$(call clist,$(CPPFLAGS)), $(call clist,$(CFLAGS)), -xc]
+  Compiler: clang
+endef
 
+${TARGET}: $(BUILD_DIR) .clangd $(OBJ) $(DATA_DIR)
+	$(info ===>  LINKING  $(TARGET))
+	$(Q)${LD} ${LFLAGS} -o $(TARGET) $(OBJ) $(LIBS)
 
-$(TARGETS): 
-	@echo ""
-	@echo "********************************"
-	@echo " Build $@ "
-	@echo "********************************"
-	$(MAKE) -C $@ $(MAKECMDGOALS)
+$(BUILD_DIR)/%.o:  %.c $(MAKE_DIR)/include_$(TOOLCHAIN).mk config.mk
+	$(info ===>  COMPILE  $@)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+	$(Q)$(CC) $(CPPFLAGS) -MT $(@:.d=.o) -MM  $< > $(BUILD_DIR)/$*.d
 
-end:
-	@echo ""
-	@echo "********************************"
-	@echo ' RabbitRunnerCT build complete! '
-	@echo "********************************"
+$(BUILD_DIR)/%.s:  %.c
+	$(info ===>  GENERATE ASM  $@)
+	$(CC) -S $(CPPFLAGS) $(CFLAGS) $< -o $@
 
+.PHONY: clean distclean info asm format
 
-clean: $(TARGETS)
+clean:
+	$(info ===>  CLEAN)
+	@rm -rf $(BUILD_DIR)
 
+distclean:
+	$(info ===>  DIST CLEAN)
+	@rm -rf build
+	@rm -f dftbench-*
+	@rm -f .clangd compile_commands.json
 
+info:
+	$(info $(CFLAGS))
+	$(Q)$(CC) $(VERSION)
 
-distclean: $(TARGETS)
-	@echo "===>  DIST CLEAN"
-	@rm -f *.dat*
+asm:  $(BUILD_DIR) $(ASM)
 
+format:
+	@for src in $(SRC) ; do \
+		echo "Formatting $$src" ; \
+		clang-format -i $$src ; \
+	done
+	@echo "Done"
 
-#.SILENT:
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
 
-.PHONY: clean distclean  $(TARGETS)
+.clangd:
+	$(file > .clangd,$(CLANGD_TEMPLATE))
 
-.NOTPARALLEL:
-
+-include $(OBJ:.o=.d)
