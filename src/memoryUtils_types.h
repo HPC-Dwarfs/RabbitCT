@@ -5,6 +5,7 @@
 #ifndef MEMORYUTILS_TYPES_H
 #define MEMORYUTILS_TYPES_H
 
+#include "analyseGeometry_types.h"
 #include <stdint.h>
 
 typedef struct {
@@ -16,6 +17,6 @@ typedef struct {
   int lineOffset;
   int lineSize;
   float **savePtr;
-} ZeroPadding;
+} ZeroPaddingType;
 
 #endif /*MEMORYUTILS_TYPES_H*/

@@ -6,6 +6,7 @@
 /* #####   HEADER FILE INCLUDES   ######################################### */
 
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,9 +20,7 @@
 #include <sys/syscall.h>
 #endif
 
-#include "bstrlib.h"
 #include "error.h"
-#include "rabbitHelper_types.h"
 #include "rabbitNuma.h"
 
 /* #####   EXPORTED VARIABLES   ########################################### */

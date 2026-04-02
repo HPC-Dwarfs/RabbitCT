@@ -7,12 +7,12 @@
 
 #include "ctFileReader.h"
 
-static int currentImage = 0;
+static int CurrentImage = 0;
 
 void ctFileReader_openFile(char *filename, RabbitCtFile *ctFile)
 {
 
-  ctFile->file = fopen(filename, "r");
+  ctFile->file = fopen(filename, "re");
 
   if (ctFile->file != NULL) {
     if (!fread((void *)&ctFile->header, sizeof(RabbitCtHeader), 1, ctFile->file)) {
@@ -24,7 +24,7 @@ void ctFileReader_openFile(char *filename, RabbitCtFile *ctFile)
     exit(EXIT_FAILURE);
   }
 
-  currentImage      = 0;
+  CurrentImage      = 0;
   ctFile->imageSize = ctFile->header.imageDimension[0] * ctFile->header.imageDimension[1];
 
   printf("Opened CT Data file: %d projections with size %d X %d\n",
@@ -46,7 +46,7 @@ void ctFileReader_readGeometry(RabbitCtFile *ctFile, double *projectionData)
 
 int ctFileReader_readImage(RabbitCtFile *ctFile, double *matrix, float *image)
 {
-  currentImage++;
+  CurrentImage++;
 
   if (!fread((void *)matrix, sizeof(double), 12, ctFile->file)) {
     printf("Failed to read projection matrix! Exit.\n");
@@ -57,7 +57,7 @@ int ctFileReader_readImage(RabbitCtFile *ctFile, double *matrix, float *image)
     exit(EXIT_FAILURE);
   }
 
-  return currentImage;
+  return CurrentImage;
 }
 
 #if 0

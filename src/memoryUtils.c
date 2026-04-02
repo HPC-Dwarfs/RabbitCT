@@ -14,15 +14,14 @@
 
 #include "memoryUtils.h"
 #include "rabbitAffinity.h"
-#include "rabbitHelper_types.h"
 #include "rabbitNuma.h"
 
-void memoryUtils_init()
+void memoryUtilsInit()
 {
   rabbitNuma_init();
 }
 
-static void memoryUtils_noInitAllocate(float **ptr, uint64_t size)
+static void memoryUtilsNoInitAllocate(float **ptr, uint64_t size)
 {
   int errorCode;
 
@@ -41,7 +40,7 @@ static void memoryUtils_noInitAllocate(float **ptr, uint64_t size)
   memset(*ptr, 0, size * sizeof(float));
 }
 
-void memoryUtils_allocate(float **ptr, uint64_t size)
+void memoryUtilsAllocate(float **ptr, uint64_t size)
 {
   int errorCode;
 
@@ -67,7 +66,7 @@ void memoryUtils_allocate(float **ptr, uint64_t size)
 #endif
 }
 
-void memoryUtils_zeroPadInit(RabbitCtGlobalData *rcgd, ZeroPadding *padding)
+void memoryUtilsZeroPadInit(RabbitCtGlobalData *rcgd, ZeroPaddingType *padding)
 {
   int align = 0;
 
@@ -83,15 +82,15 @@ void memoryUtils_zeroPadInit(RabbitCtGlobalData *rcgd, ZeroPadding *padding)
   if ((align = (padXr % VECTORSIZE)))
     padXr += (VECTORSIZE - align);
 
-  int XSize            = padXl + rcgd->imageWidth + padXr;
-  int YSize            = padYb + rcgd->imageHeight + padYt;
+  int xSize            = padXl + rcgd->imageWidth + padXr;
+  int ySize            = padYb + rcgd->imageHeight + padYt;
 
-  padding->paddedSize  = XSize * YSize;
+  padding->paddedSize  = xSize * ySize;
 
-  padding->startOffset = padYb * XSize + padXl;
-  padding->lineOffset  = XSize;
+  padding->startOffset = padYb * xSize + padXl;
+  padding->lineOffset  = xSize;
 
-  printf("Padded Size = %d X %d \n", XSize, YSize);
+  printf("Padded Size = %d X %d \n", xSize, ySize);
   printf("startOffset = %d \n", padding->startOffset);
   printf("lineOffset = %d \n", padding->lineOffset);
 }
@@ -111,7 +110,7 @@ memoryUtils_zeroPadAllocate(RabbitCtGlobalData * rcgd, ZeroPadding* padding )
 
 #endif
 
-void memoryUtils_zeroPadAllocate(RabbitCtGlobalData *rcgd, ZeroPadding *padding)
+void memoryUtilsZeroPadAllocate(RabbitCtGlobalData *rcgd, ZeroPaddingType *padding)
 {
 #ifdef __linux__
   cpu_set_t cpuSet;
@@ -128,7 +127,7 @@ void memoryUtils_zeroPadAllocate(RabbitCtGlobalData *rcgd, ZeroPadding *padding)
     padding->buffern[i] = (float **)malloc(rcgd->numberOfProjections * sizeof(float *));
 
     for (int j = 0; j < rcgd->numberOfProjections; j++) {
-      memoryUtils_noInitAllocate(padding->buffern[i] + j, padding->paddedSize * 2);
+      memoryUtilsNoInitAllocate(padding->buffern[i] + j, padding->paddedSize * 2);
     }
   }
 
@@ -148,8 +147,8 @@ void memoryUtils_zeroPadAllocate(RabbitCtGlobalData *rcgd, ZeroPadding *padding)
 #endif
 }
 
-void memoryUtils_zeroPadEnterExp(
-    RabbitCtGlobalData *rcgd, ZeroPadding *padding, Projection *projectionBuffer)
+void memoryUtilsZeroPadEnterExp(
+    RabbitCtGlobalData *rcgd, ZeroPaddingType *padding, Projection *projectionBuffer)
 {
   int myNode        = -1;
   int myWorkerNode  = -1;
@@ -199,7 +198,7 @@ void memoryUtils_zeroPadEnterExp(
   }
 }
 
-void memoryUtils_zeroPadEnter(RabbitCtGlobalData *rcgd, ZeroPadding *padding)
+void memoryUtilsZeroPadEnter(RabbitCtGlobalData *rcgd, ZeroPaddingType *padding)
 {
   padding->lineSize = rcgd->imageWidth;
 
@@ -220,7 +219,7 @@ void memoryUtils_zeroPadEnter(RabbitCtGlobalData *rcgd, ZeroPadding *padding)
   rcgd->imageWidth = padding->lineOffset;
 }
 
-void memoryUtils_zeroPadLeave(RabbitCtGlobalData *rcgd, ZeroPadding *padding)
+void memoryUtilsZeroPadLeave(RabbitCtGlobalData *rcgd, ZeroPaddingType *padding)
 {
   rcgd->imageWidth = padding->lineSize;
 

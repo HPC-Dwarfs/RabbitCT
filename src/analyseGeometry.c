@@ -3,12 +3,14 @@
  * Use of this source code is governed by a MIT style
  * license that can be found in the LICENSE file. */
 #include "analyseGeometry.h"
-#include "rabbitHelper_types.h"
+#include "analyseGeometry_types.h"
+#include "rabbitCt.h"
 #include <errno.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static void initCuboid(Point3D *s, Point3D corners[], Point3D *p)
 {
@@ -50,8 +52,8 @@ void computeShadowOfProjection(RabbitCtGlobalData *data, OutShadow *shadow)
   Point3D size = { data->problemSize, data->problemSize, data->problemSize };
   Point3D corners[8];
   Point3D principalCorner = { 0, 0, 0 };
-  float R_L               = data->voxelSize;
-  float O_L               = data->O_Index;
+  float rL                = data->voxelSize;
+  float oL                = data->O_Index;
   double minU             = data->imageWidth + 1;
   double minV             = data->imageHeight + 1;
   double maxU             = -2;
@@ -60,27 +62,27 @@ void computeShadowOfProjection(RabbitCtGlobalData *data, OutShadow *shadow)
   initCuboid(&size, corners, &principalCorner);
 
   for (uint32_t view = 0; view < data->numberOfProjections; view++) {
-    double *A_n = data->globalGeometry + (view * 12);
+    double *aN = data->globalGeometry + (view * 12);
 
     for (int co = 0; co < 8; co++) {
-      Point3D p  = corners[co];
+      Point3D p = corners[co];
 
-      double x   = O_L + (double)p.x * R_L;
-      double y   = O_L + (double)p.y * R_L;
-      double z   = O_L + (double)p.z * R_L;
+      double x  = oL + (double)p.x * rL;
+      double y  = oL + (double)p.y * rL;
+      double z  = oL + (double)p.z * rL;
 
-      double w_n = A_n[2] * x + A_n[5] * y + A_n[8] * z + A_n[11];
-      double u_n = (A_n[0] * x + A_n[3] * y + A_n[6] * z + A_n[9]) / w_n;
-      double v_n = (A_n[1] * x + A_n[4] * y + A_n[7] * z + A_n[10]) / w_n;
+      double wN = aN[2] * x + aN[5] * y + aN[8] * z + aN[11];
+      double uN = (aN[0] * x + aN[3] * y + aN[6] * z + aN[9]) / wN;
+      double vN = (aN[1] * x + aN[4] * y + aN[7] * z + aN[10]) / wN;
 
-      if (u_n < minU)
-        minU = u_n;
-      if (v_n < minV)
-        minV = v_n;
-      if (u_n > maxU)
-        maxU = u_n;
-      if (v_n > maxV)
-        maxV = v_n;
+      if (uN < minU)
+        minU = uN;
+      if (vN < minV)
+        minV = vN;
+      if (uN > maxU)
+        maxU = uN;
+      if (vN > maxV)
+        maxV = vN;
     }
   }
 
@@ -99,11 +101,11 @@ void computeShadowOfProjection(RabbitCtGlobalData *data, OutShadow *shadow)
 
 void computeLineRanges(RabbitCtGlobalData *data, LineRange **range)
 {
-  unsigned int L   = data->problemSize;
-  unsigned int ISX = data->imageWidth;
-  unsigned int ISY = data->imageHeight;
-  unsigned int N   = data->numberOfProjections;
-  const float MM   = data->voxelSize;
+  unsigned int l   = data->problemSize;
+  unsigned int isx = data->imageWidth;
+  unsigned int isy = data->imageHeight;
+  unsigned int n   = data->numberOfProjections;
+  const float mm   = data->voxelSize;
 
   /* Check whether a filename was specified using the -C option,
    * if not fall back to the default filename "LR_PREFIXxxx.rct",
@@ -112,7 +114,7 @@ void computeLineRanges(RabbitCtGlobalData *data, LineRange **range)
   char *clipFile = data->clipFilename;
   if (clipFile == NULL) {
     int nchars;
-    switch (L) {
+    switch (l) {
     case 128:
     case 256:
     case 512:
@@ -122,7 +124,7 @@ void computeLineRanges(RabbitCtGlobalData *data, LineRange **range)
       nchars = strlen(LR_PREFIX) + 4 + strlen(".rct") + 1;
       break;
     default:
-      printf("Unsupported problem size: %d\n", L);
+      printf("Unsupported problem size: %d\n", l);
       exit(EXIT_FAILURE);
     }
 
@@ -144,34 +146,34 @@ void computeLineRanges(RabbitCtGlobalData *data, LineRange **range)
       perror("malloc");
       exit(EXIT_FAILURE);
     }
-    snprintf(clipFile, nchars, "%s%d-%d.rct", LR_PREFIX, L, VECTORSIZE);
+    snprintf(clipFile, nchars, "%s%d-%d.rct", LR_PREFIX, l, VECTORSIZE);
     printf("No clipping file specified, falling back to %s\n", clipFile);
   }
 
   /* If filename exists, verify the size and load contents into range */
   FILE *fClipFile;
-  if ((fClipFile = fopen(clipFile, "r")) != NULL) {
+  if ((fClipFile = fopen(clipFile, "re")) != NULL) {
     /* verify file size */
     fseek(fClipFile, 0L, SEEK_END);
     int fsize = ftell(fClipFile);
-    if (fsize != N * L * L * sizeof(LineRange)) {
+    if (fsize != n * l * l * sizeof(LineRange)) {
       printf("corrupted file %s: size is %lu (should be %lu)\n",
           clipFile,
           (unsigned long)fsize,
-          N * L * L * sizeof(LineRange));
+          n * l * l * sizeof(LineRange));
       exit(EXIT_FAILURE);
     }
     fseek(fClipFile, 0L, SEEK_SET);
 
     /* Read file NUMA-aware into buffer. */
     int nbytes;
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < n; ++i) {
 #pragma omp parallel for schedule(static) ordered
-      for (int j = 0; j < L; j++) {
+      for (int j = 0; j < l; j++) {
 #pragma omp ordered
         {
-          nbytes = fread(range[i] + j * L, sizeof(LineRange), L, fClipFile);
-          if (nbytes != L) {
+          nbytes = fread(range[i] + j * l, sizeof(LineRange), l, fClipFile);
+          if (nbytes != l) {
             fprintf(stderr, "error reading from %s: ", clipFile);
             perror("");
             exit(EXIT_FAILURE);
@@ -196,7 +198,7 @@ void computeLineRanges(RabbitCtGlobalData *data, LineRange **range)
     }
 
     /* Open file for writing. */
-    if ((fClipFile = fopen(clipFile, "w")) == NULL) {
+    if ((fClipFile = fopen(clipFile, "we")) == NULL) {
       fprintf(stderr, "fopen %s: ", clipFile);
       perror("");
       exit(EXIT_FAILURE);
@@ -210,12 +212,12 @@ void computeLineRanges(RabbitCtGlobalData *data, LineRange **range)
       double v_n;
       int iix, iiy;
       float wz = data->O_Index;
-      for (int z = 0; z < L; z++, wz += MM) {
+      for (int z = 0; z < l; z++, wz += mm) {
         double *A_n = data->globalGeometry + (view * 12);
         float wy    = data->O_Index;
         float wx;
 
-        for (int y = 0; y < L; y++, wy += MM) {
+        for (int y = 0; y < l; y++, wy += mm) {
           int xstart = -1;
           int xstop  = -1;
 
@@ -225,12 +227,12 @@ void computeLineRanges(RabbitCtGlobalData *data, LineRange **range)
           // voxel thats raw hits the projection image and break the loop
 
           // scan from left to right
-          for (int x = 0; x < L; x++) {
-            wx = x * MM + data->O_Index;
+          for (int x = 0; x < l; x++) {
+            wx = x * mm + data->O_Index;
             COMPUTE_GEOMETRY;
 
             // continue with next voxel if we missed the projection
-            if ((iix + 1 < 0) || (iix > ISX - 1) || (iiy + 1 < 0) || (iiy > ISY - 1))
+            if ((iix + 1 < 0) || (iix > isx - 1) || (iiy + 1 < 0) || (iiy > isy - 1))
               continue;
 
             // we hit the projection image, this means that we have
@@ -243,20 +245,20 @@ void computeLineRanges(RabbitCtGlobalData *data, LineRange **range)
           // the process this means that we scanned the whole x-line
           // without ever hitting the projection image
           if (xstart == -1) {
-            range[view][z * L + y].start = 0;
-            range[view][z * L + y].stop  = 0;
+            range[view][z * l + y].start = 0;
+            range[view][z * l + y].stop  = 0;
             continue; // jump to next iteration in y-loop
           }
 
           // since we hit a voxel while scanning from left to right
           // we now scan from right to left to find out where to stop
           // (if at all)
-          for (int x = L - 1; x >= 0; --x) {
-            wx = x * MM + data->O_Index;
+          for (int x = l - 1; x >= 0; --x) {
+            wx = x * mm + data->O_Index;
             COMPUTE_GEOMETRY;
 
             // continue with next voxel if we missed the projection
-            if ((iix + 1 < 0) || (iix > ISX - 1) || (iiy + 1 < 0) || (iiy > ISY - 1))
+            if ((iix + 1 < 0) || (iix > isx - 1) || (iiy + 1 < 0) || (iiy > isy - 1))
               continue;
 
             // we hit the projection image, this means that we have
@@ -272,24 +274,24 @@ void computeLineRanges(RabbitCtGlobalData *data, LineRange **range)
           if ((align = (xstart % VECTORSIZE)))
             xstart -= align;
 
-          range[view][z * L + y].start = xstart;
-          range[view][z * L + y].stop  = xstop;
+          range[view][z * l + y].start = xstart;
+          range[view][z * l + y].stop  = xstop;
         } // y-loop
       } // z-loop
     } // view-loop
 
     /* Write LineRange into file. */
     int nbytes;
-    for (int i = 0; i < N; ++i) {
-      nbytes = fwrite(range[i], sizeof(LineRange), L * L, fClipFile);
-      if (nbytes != L * L) {
+    for (int i = 0; i < n; ++i) {
+      nbytes = fwrite(range[i], sizeof(LineRange), l * l, fClipFile);
+      if (nbytes != l * l) {
         fprintf(stderr, "error writing to %s: ", clipFile);
         perror("");
         exit(EXIT_FAILURE);
       }
     }
     printf("Wrote %lu bytes of clipping data to %s\n",
-        N * L * L * sizeof(LineRange),
+        n * l * l * sizeof(LineRange),
         clipFile);
     fclose(fClipFile);
   }

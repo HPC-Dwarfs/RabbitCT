@@ -5,6 +5,8 @@
 #ifndef ANALYSE_GEOMETRY_H
 #define ANALYSE_GEOMETRY_H
 
+#include "analyseGeometry_types.h"
+#include "rabbitCt.h"
 #define LR_PREFIX "RabbitInput/LineRange"
 
 extern void computeShadowOfProjection(RabbitCtGlobalData *data, OutShadow *shadow);

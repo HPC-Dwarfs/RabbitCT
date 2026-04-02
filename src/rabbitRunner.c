@@ -65,7 +65,7 @@ int main(int argc, char **argv)
   int size                      = 0;
   int bufferSize                = 1;
   uint64_t time                 = 0.0;
-  int opt_verbose               = 0;
+  int optVerbose                = 0;
   char *inFilename              = NULL;
   char *outFilename             = NULL;
   char *refFilename             = NULL;
@@ -90,7 +90,7 @@ int main(int argc, char **argv)
       HELP_MSG;
       exit(EXIT_SUCCESS);
     case 'v':
-      opt_verbose = 1;
+      optVerbose = 1;
       break;
     case 'i':
       inFilename = (char *)malloc(strlen(optarg) + 1);
@@ -148,7 +148,7 @@ int main(int argc, char **argv)
   data.O_Index     = -0.5f * data.voxelSize * ((float)(data.problemSize) - 1.0f);
 
   numberOfVoxel    = size * size * size;
-  memoryUtils_allocate(&data.volumeData, numberOfVoxel);
+  memoryUtilsAllocate(&data.volumeData, numberOfVoxel);
 
   ctFileReader_openFile(inFilename, &inputFile);
 
@@ -185,10 +185,9 @@ int main(int argc, char **argv)
     s_fncPrepareAlgorithm(&data);
     rabbitTimer_stopCycles(&cycleData);
 
-    if (opt_verbose) {
+    if (optVerbose) {
       printf("Prepare Algorithm Timing: %g sec\n",
-          (double)rabbitTimer_printCyclesTime(&cycleData)) /
-          (double)1000000.0;
+          (double)rabbitTimer_printCyclesTime(&cycleData) / (double)1000000.0);
     }
   }
 
@@ -199,7 +198,7 @@ int main(int argc, char **argv)
    * *****************************************************/
   {
     printf("Running ... this may take some time.\n");
-    if (opt_verbose) {
+    if (optVerbose) {
       printf("Processing %d projections with size %d X %d\n",
           globalNumberOfProjections,
           data.imageWidth,
@@ -218,12 +217,12 @@ int main(int argc, char **argv)
 
     for (int i = 0; i < bufferSize; i++) {
       data.projectionBuffer[i].matrix = (double *)malloc(12 * sizeof(double));
-      memoryUtils_allocate(
+      memoryUtilsAllocate(
           &data.projectionBuffer[i].image, data.imageWidth * data.imageHeight);
     }
 
     while (counter > 0) {
-      if (opt_verbose) {
+      if (optVerbose) {
         printf("Processing buffered run - %d left\n", counter);
       }
 
@@ -253,9 +252,9 @@ int main(int argc, char **argv)
     const int magicNum        = 591984;
     const int magicNumEnd     = 489195;
     uint16_t *referenceVolume = (uint16_t *)malloc(numberOfVoxel * sizeof(uint16_t));
-    uint64_t *runtime = (uint64_t *)malloc(globalNumberOfProjections * sizeof(uint64_t));
-    FILE *file        = fopen(refFilename, "r");
-    FILE *resFile     = fopen("result.rctd", "w");
+    uint64_t *runtime = (uint64_t *)malloc(sizeof(uint64_t) * globalNumberOfProjections);
+    FILE *file        = fopen(refFilename, "re");
+    FILE *resFile     = fopen("result.rctd", "we");
 
     if (file != NULL) {
       if (!fread((void *)referenceVolume, sizeof(uint16_t), numberOfVoxel, file)) {
@@ -267,35 +266,35 @@ int main(int argc, char **argv)
 
     fclose(file);
 
-    float *rec_volume = data.volumeData;
-    float *HUS        = inputFile.header.HUScalingFactors;
-    float HU_ax;
-    const int NUM_BINS = 11;
+    float *recVolume = data.volumeData;
+    float *hus       = inputFile.header.HUScalingFactors;
+    float huAx;
+    const int numBins = 11;
     // 0-1, 1-2, 2-3, 3-4,  ... 9-10, >10
-    uint32_t errorHist[NUM_BINS];
-    memset(errorHist, 0, NUM_BINS * sizeof(uint32_t));
+    uint32_t errorHist[numBins];
+    memset(errorHist, 0, numBins * sizeof(uint32_t));
 
     for (uint32_t i = 0; i < numberOfVoxel; i++) {
-      if (rec_volume[i] > 0.0f) {
-        HU_ax = US_ROUND(HUS[0] * rec_volume[i] + HUS[1]);
+      if (recVolume[i] > 0.0f) {
+        huAx = US_ROUND(hus[0] * recVolume[i] + hus[1]);
       } else {
-        HU_ax = 0.0f;
+        huAx = 0.0f;
       }
 
-      if (HU_ax > 4095.0f) {
-        HU_ax = 4095.0f;
+      if (huAx > 4095.0f) {
+        huAx = 4095.0f;
       }
 
-      const float cerr   = (HU_ax - (float)(referenceVolume[i]));
-      const float absErr = fabs(cerr);
+      const float cerr   = (huAx - (float)(referenceVolume[i]));
+      const float absErr = fabsf(cerr);
 
       maxError           = MAX(maxError, (double)absErr);
       error += cerr * cerr;
-      rec_volume[i]    = HU_ax;
-      uint32_t histIdx = (uint32_t)floor(absErr);
+      recVolume[i]     = huAx;
+      uint32_t histIdx = (uint32_t)floorf(absErr);
 
-      if (histIdx > NUM_BINS - 1) {
-        histIdx = NUM_BINS - 1;
+      if (histIdx > numBins - 1) {
+        histIdx = numBins - 1;
       }
 
       ++errorHist[histIdx];
@@ -329,13 +328,13 @@ int main(int argc, char **argv)
     fwrite(&size, sizeof(int), 1, resFile);
     fwrite(&inputFile.header.numberOfImages, sizeof(uint32_t), 1, resFile);
     fwrite(runtime, sizeof(uint64_t), globalNumberOfProjections, resFile);
-    fwrite(rec_volume + (data.problemSize / 2 - 1) * data.problemSize * data.problemSize,
+    fwrite(recVolume + (data.problemSize / 2 - 1) * data.problemSize * data.problemSize,
         sizeof(float),
         data.problemSize * data.problemSize,
         resFile);
     fwrite(&error, sizeof(double), 1, resFile);
     fwrite(&maxError, sizeof(double), 1, resFile);
-    fwrite(&errorHist, sizeof(uint32_t), NUM_BINS, resFile);
+    fwrite(&errorHist, sizeof(uint32_t), numBins, resFile);
     fwrite(&magicNumEnd, sizeof(int), 1, resFile);
 
     fclose(resFile);
@@ -356,7 +355,7 @@ int main(int argc, char **argv)
    * OPTIONAL  WRITE RESULT
    * *****************************************************/
   if (outFilename != NULL) {
-    FILE *file = fopen(outFilename, "w");
+    FILE *file = fopen(outFilename, "we");
     fwrite(data.volumeData, sizeof(float), numberOfVoxel, file);
     fclose(file);
   }
@@ -365,11 +364,11 @@ int main(int argc, char **argv)
    * OUTPUT RESULT
    * *****************************************************/
 
-  double time_mean = (double)time / (double)(1000.0 * (double)globalNumberOfProjections);
+  double timeMean = (double)time / (double)(1000.0 * (double)globalNumberOfProjections);
   printf("\n--------------------------------------------------------------\n");
   printf("Runtime statistics:\n");
   printf("Total: %g s\n", (double)time / (double)1000000.0);
-  printf("Average: %g ms \n\n", time_mean);
+  printf("Average: %g ms \n\n", timeMean);
 
   LIKWID_MARKER_CLOSE;
 

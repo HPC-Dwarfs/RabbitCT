@@ -7,13 +7,12 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "rabbitHelper_types.h"
 #include "rabbitTimer.h"
 
 /* #####   VARIABLES  -  LOCAL TO THIS SOURCE FILE   ###################### */
 
-static uint64_t cpuClock       = 0;
-static uint64_t cyclesForCpuid = 0;
+static uint64_t CpuClock       = 0;
+static uint64_t CyclesForCpuid = 0;
 
 /* #####   FUNCTION DEFINITIONS  -  LOCAL TO THIS SOURCE FILE   ########### */
 
@@ -93,8 +92,8 @@ void rabbitTimer_init(void)
   getCpuidCycles();
   getCpuSpeed();
 
-  cyclesForCpuid = getCpuidCycles();
-  cpuClock       = getCpuSpeed();
+  CyclesForCpuid = getCpuidCycles();
+  CpuClock       = getCpuSpeed();
 }
 
 void rabbitTimer_startCycles(CyclesData *time)
@@ -191,15 +190,15 @@ uint64_t rabbitTimer_printCycles(CyclesData *time)
 uint64_t rabbitTimer_printCyclesTime(CyclesData *time)
 {
   uint64_t cycles = time->stop.int64 - time->start.int64 - time->base;
-  return cycles * 1000000ULL / cpuClock;
+  return cycles * 1000000ULL / CpuClock;
 }
 
 uint64_t rabbitTimer_getCpuClock(void)
 {
-  return cpuClock;
+  return CpuClock;
 }
 
 uint64_t rabbitTimer_getCpuidCycles(void)
 {
-  return cyclesForCpuid;
+  return CyclesForCpuid;
 }

@@ -7,42 +7,42 @@
 
 #include "rabbitProgress.h"
 
-static const char **mRabbit;
-static int mMax                   = 0;
-static int mNextLine              = 1;
-static int mRabbitLines           = 0;
+static const char **MRabbit;
+static int MMax                   = 0;
+static int MNextLine              = 1;
+static int MRabbitLines           = 0;
 
-static const char *rabbit128[3]   = { " (\\_/)", "(='.'=)", "(\")_(\")" };
+static const char *Rabbit128[3]   = { " (\\_/)", "(='.'=)", "(\")_(\")" };
 
-static const char *rabbit256[9]   = { "   _     _     ",
-  "   \\`\\ /`/   ",
-  "    \\ V /     ",
-  "    /. .\\     ",
-  "   =\\ T /=    ",
-  "    / ^ \\     ",
-  "   /\\\\ //\\  ",
-  " __\\ \" \" /__",
-  "(____/^\\____) " };
+static const char *Rabbit256[9]   = { "   _     _     ",
+    "   \\`\\ /`/   ",
+    "    \\ V /     ",
+    "    /. .\\     ",
+    "   =\\ T /=    ",
+    "    / ^ \\     ",
+    "   /\\\\ //\\  ",
+    " __\\ \" \" /__",
+    "(____/^\\____) " };
 
-static const char *rabbit512[16]  = { "    / \\     / \\     ",
-  "   {   }   {   }      ",
-  "   {   {   }   }      ",
-  "    \\   \\ /   /     ",
-  "     \\   Y   /       ",
-  "     .-\"`\"`\"-.     ",
-  "   ,`         `.      ",
-  "  /             \\    ",
-  " /               \\   ",
-  "{     ;\"\";,       } ",
-  "{  /\";`'`,;       }  ",
-  " \\{  ;`,'`;.     /   ",
-  "  {  }`"
-  "`  }   /}    ",
-  "  {  }      {  //     ",
-  "  {||}      {  /      ",
-  "  `\"'       `\"'     " };
+static const char *Rabbit512[16]  = { "    / \\     / \\     ",
+   "   {   }   {   }      ",
+   "   {   {   }   }      ",
+   "    \\   \\ /   /     ",
+   "     \\   Y   /       ",
+   "     .-\"`\"`\"-.     ",
+   "   ,`         `.      ",
+   "  /             \\    ",
+   " /               \\   ",
+   "{     ;\"\";,       } ",
+   "{  /\";`'`,;       }  ",
+   " \\{  ;`,'`;.     /   ",
+   "  {  }`"
+    "`  }   /}    ",
+   "  {  }      {  //     ",
+   "  {||}      {  /      ",
+   "  `\"'       `\"'     " };
 
-static const char *rabbit1024[19] = { "        /|      __    ",
+static const char *Rabbit1024[19] = { "        /|      __    ",
   "       / |   ,-~ /    ",
   "      Y :|  //  /     ",
   "      | jj /( .^      ",
@@ -64,27 +64,27 @@ static const char *rabbit1024[19] = { "        /|      __    ",
 
 void rabbitProgress_init(int maxValue, int rabbitSize)
 {
-  mMax = maxValue;
+  MMax = maxValue;
 
   if (rabbitSize >= 1024) {
-    mRabbit      = rabbit1024;
-    mRabbitLines = 19;
+    MRabbit      = Rabbit1024;
+    MRabbitLines = 19;
   } else if (rabbitSize >= 512) {
-    mRabbit      = rabbit512;
-    mRabbitLines = 16;
+    MRabbit      = Rabbit512;
+    MRabbitLines = 16;
   } else if (rabbitSize >= 256) {
-    mRabbit      = rabbit256;
-    mRabbitLines = 9;
+    MRabbit      = Rabbit256;
+    MRabbitLines = 9;
   } else {
-    mRabbit      = rabbit128;
-    mRabbitLines = 3;
+    MRabbit      = Rabbit128;
+    MRabbitLines = 3;
   }
 }
 
 void rabbitProgress_progress(int pos)
 {
-  if ((float)mNextLine / (float)mRabbitLines <= (float)pos / (float)mMax) {
-    printf(" %s\n", mRabbit[mNextLine - 1]);
-    mNextLine++;
+  if ((float)MNextLine / (float)MRabbitLines <= (float)pos / (float)MMax) {
+    printf(" %s\n", MRabbit[MNextLine - 1]);
+    MNextLine++;
   }
 }

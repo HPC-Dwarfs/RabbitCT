@@ -24,10 +24,7 @@
 #include <mach/thread_policy.h>
 #endif
 
-#include "error.h"
 #include "rabbitAffinity.h"
-#include "rabbitHelper_types.h"
-#include "rabbitNuma.h"
 
 /* #####   EXPORTED VARIABLES   ########################################### */
 
