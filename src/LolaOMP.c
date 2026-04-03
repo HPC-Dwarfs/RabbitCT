@@ -3,7 +3,6 @@
  * Use of this source code is governed by a MIT style
  * license that can be found in the LICENSE file. */
 
-#include "memoryUtils_types.h"
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -11,29 +10,20 @@
 #include <stdlib.h>
 
 #include "analyseGeometry.h"
+#include "memoryUtils_types.h"
 #include "rabbitCt.h"
 #ifdef KERNEL_CYCLES
-#include <rabbitTimer.h>
+#include "rabbitTimer.h"
 #endif
-
-#define SIMD_BIT (512)
-#define SIMD_BYTE (SIMD_BIT / 8)
-#define SIMD_OPS (SIMD_BYTE / sizeof(float))
 
 static OutShadow Shadow;
 static LineRange **Range;
 static ZeroPaddingType Padding;
 static float *PaddedImg;
-static uint64_t VoxelsClipping = 0, VoxelsActual = 0;
 
 void lolaOmpFinish(RabbitCtGlobalData *rcgd)
 {
-  const int l    = rcgd->problemSize;
-  uint64_t total = (uint64_t)l * (uint64_t)l * (uint64_t)l * 496UL;
-  printf("RCTFinishAlgorithm(): clipping stats:\n");
-  printf("Total Volume Voxels: %llu\n", total);
-  printf("Clipped Volume Voxels: %llu\n", VoxelsClipping);
-  printf("Actual Volume Voxels: %llu\n", VoxelsActual);
+  (void)rcgd;
 }
 
 int lolaOmpPrepare(RabbitCtGlobalData *rcgd)
@@ -88,7 +78,7 @@ int lolaOmpBackprojection(RabbitCtGlobalData *rcgd)
     const float *const i  = rcgd->projectionBuffer[p].image;
     const int id          = rcgd->projectionBuffer[p].id;
 
-#pragma omp parallel for reduction(+ : voxels_clipping) reduction(+ : voxels_actual)
+#pragma omp parallel for
     for (int z = 0; z < l; ++z) {
       for (int y = 0; y < l; ++y) {
         /* Select starting voxel and voxel count in x direction for this
@@ -98,11 +88,7 @@ int lolaOmpBackprojection(RabbitCtGlobalData *rcgd)
         if (stop - start == 0)
           continue;
 
-        int missedRow = 0;
-
-        for (int x = 0; x < l; ++x) {
-          if (x >= start && x < stop)
-            VoxelsClipping++;
+        for (int x = start; x < stop; ++x) {
           /* Convert from VCS to WCS */
           float wz = z * mm + o;
           float wy = y * mm + o;
@@ -125,8 +111,22 @@ int lolaOmpBackprojection(RabbitCtGlobalData *rcgd)
               (iiy > imageHeight - 1))
             continue;
 
-          // we hit the projection!
-          VoxelsActual++;
+          // bilinear interpolation
+          float alpha = ix - iix;
+          float beta  = iy - iiy;
+          const int iw = (int)imageWidth;
+
+          float val = 0.0f;
+          if (iix >= 0 && iix < iw && iiy >= 0 && iiy < (int)imageHeight)
+            val += (1.0f - alpha) * (1.0f - beta) * i[iiy * iw + iix];
+          if (iix + 1 < iw && iix + 1 >= 0 && iiy >= 0 && iiy < (int)imageHeight)
+            val += alpha * (1.0f - beta) * i[iiy * iw + iix + 1];
+          if (iix >= 0 && iix < iw && iiy + 1 >= 0 && iiy + 1 < (int)imageHeight)
+            val += (1.0f - alpha) * beta * i[(iiy + 1) * iw + iix];
+          if (iix + 1 < iw && iix + 1 >= 0 && iiy + 1 >= 0 && iiy + 1 < (int)imageHeight)
+            val += alpha * beta * i[(iiy + 1) * iw + iix + 1];
+
+          vol[z * l * l + y * l + x] += val / (w * w);
         } // x-loop
       } // y-loop
     } // z-loop
