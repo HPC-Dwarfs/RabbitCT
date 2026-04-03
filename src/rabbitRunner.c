@@ -68,6 +68,7 @@ int main(int argc, char **argv)
   int optVerbose                = 0;
   char *inFilename              = NULL;
   char *outFilename             = NULL;
+  char *pgmFilename             = NULL;
   char *refFilename             = NULL;
   char *clipFilename            = NULL;
   char *analysisFile            = NULL;
@@ -84,7 +85,7 @@ int main(int argc, char **argv)
     exit(EXIT_SUCCESS);
   }
 
-  while ((c = getopt(argc, argv, "+o:b:a:C:c:m:s:i:hv")) != -1) {
+  while ((c = getopt(argc, argv, "+o:p:b:a:C:c:m:s:i:hv")) != -1) {
     switch (c) {
     case 'h':
       HELP_MSG;
@@ -117,6 +118,10 @@ int main(int argc, char **argv)
     case 'o':
       outFilename = (char *)malloc(strlen(optarg) + 1);
       strcpy(outFilename, optarg);
+      break;
+    case 'p':
+      pgmFilename = (char *)malloc(strlen(optarg) + 1);
+      strcpy(pgmFilename, optarg);
       break;
     case 'm':
       modulePath = (char *)malloc(strlen(optarg) + 1);
@@ -242,6 +247,33 @@ int main(int argc, char **argv)
   }
 
   FncFinishAlgorithm(&data);
+
+  /********************************************************
+   * OPTIONAL WRITE PGM SLICE IMAGE
+   * *****************************************************/
+  if (pgmFilename != NULL) {
+    FILE *pgmFile = fopen(pgmFilename, "we");
+    if (pgmFile != NULL) {
+      float *recVolume    = data.volumeData;
+      float *hus          = inputFile.header.HUScalingFactors;
+      const int sliceSize = data.problemSize * data.problemSize;
+      float *slice        = recVolume + (data.problemSize / 2 - 1) * sliceSize;
+      uint16_t *row       = (uint16_t *)malloc(sliceSize * sizeof(uint16_t));
+
+      fprintf(pgmFile, "P5\n%d %d\n4095\n", data.problemSize, data.problemSize);
+
+      for (int i = 0; i < sliceSize; i++) {
+        float huAx = (slice[i] > 0.0f) ? US_ROUND(hus[0] * slice[i] + hus[1]) : 0.0f;
+        if (huAx > 4095.0f) huAx = 4095.0f;
+        uint16_t val = (uint16_t)huAx;
+        /* PGM 16-bit requires big-endian byte order */
+        row[i] = (uint16_t)((val >> 8) | (val << 8));
+      }
+      fwrite(row, sizeof(uint16_t), sliceSize, pgmFile);
+      free(row);
+      fclose(pgmFile);
+    }
+  }
 
   /********************************************************
    * OPTIONAL VERIFY RESULT

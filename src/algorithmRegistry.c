@@ -9,9 +9,13 @@
 #include "types.h"
 
 /* ---- forward declarations for each compiled-in algorithm ---- */
-extern int lolaRefPrepare(RabbitCtGlobalData *);
-extern int lolaRefBackprojection(RabbitCtGlobalData *);
-extern int lolaRefFinish(RabbitCtGlobalData *);
+extern int lolaOmpPrepare(RabbitCtGlobalData *);
+extern int lolaOmpBackprojection(RabbitCtGlobalData *);
+extern int lolaOmpFinish(RabbitCtGlobalData *);
+
+extern int lolaBunnyPrepare(RabbitCtGlobalData *);
+extern int lolaBunnyBackprojection(RabbitCtGlobalData *);
+extern int lolaBunnyFinish(RabbitCtGlobalData *);
 
 /* ---- global function pointer variables ---- */
 FncPrepareAlgorithmType FncPrepareAlgorithm;
@@ -20,8 +24,9 @@ FncFinishAlgorithmType FncFinishAlgorithm;
 
 /* ---- static registry: add new algorithms here ---- */
 static const AlgorithmEntryType S_ALGORITHMS[] = {
-  { "LolaREF", lolaRefPrepare, lolaRefBackprojection, lolaRefFinish },
-  { NULL,      NULL,           NULL,                  NULL          }  /* sentinel */
+  { "LolaOMP",    lolaOmpPrepare,    lolaOmpBackprojection,    lolaOmpFinish    },
+  { "LolaBunny",  lolaBunnyPrepare,  lolaBunnyBackprojection,  lolaBunnyFinish  },
+  { NULL,         NULL,              NULL,                     NULL             }  /* sentinel */
 };
 
 int algorithmRegistryFind(const char *name)

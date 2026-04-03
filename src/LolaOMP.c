@@ -26,7 +26,7 @@ static ZeroPaddingType Padding;
 static float *PaddedImg;
 static uint64_t VoxelsClipping = 0, VoxelsActual = 0;
 
-void lolaRefFinish(RabbitCtGlobalData *rcgd)
+void lolaOmpFinish(RabbitCtGlobalData *rcgd)
 {
   const int l    = rcgd->problemSize;
   uint64_t total = (uint64_t)l * (uint64_t)l * (uint64_t)l * 496UL;
@@ -36,7 +36,7 @@ void lolaRefFinish(RabbitCtGlobalData *rcgd)
   printf("Actual Volume Voxels: %llu\n", VoxelsActual);
 }
 
-int lolaRefPrepare(RabbitCtGlobalData *rcgd)
+int lolaOmpPrepare(RabbitCtGlobalData *rcgd)
 {
   /* numberOfProjections is set to N in main if -a was given */
   if (rcgd->numberOfProjections == 0) {
@@ -72,7 +72,7 @@ int lolaRefPrepare(RabbitCtGlobalData *rcgd)
   return 1;
 }
 
-int lolaRefBackprojection(RabbitCtGlobalData *rcgd)
+int lolaOmpBackprojection(RabbitCtGlobalData *rcgd)
 {
   const int l             = rcgd->problemSize;
   const int np            = rcgd->numberOfProjections; // projections in this run
