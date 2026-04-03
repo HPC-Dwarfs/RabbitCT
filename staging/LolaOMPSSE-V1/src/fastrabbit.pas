@@ -1,0 +1,282 @@
+#define A    ARG1
+#define I    ARG2
+#define TMP  ARG3 
+#define VOL  ARG4
+#define WX   ARG5
+#define MM   ARG6
+#define ISX  ARG7
+#define L    ARG8
+
+#define A2_R FPR9
+#define MM_R FPR10
+#define WXC  FPR11
+#define W_IN FPR12
+#define TMP0 FPR13
+#define TMP1 FPR14
+#define TMP2 FPR15
+#define ONE  FPR16
+
+#define COUNTER  ebx
+#define INDEX  rbx
+#define END  edx
+#define TMPA  GPR10
+#define TMPB  GPR11
+#define TMPC  GPR1
+#define A0  GPR12
+#define A1  GPR13
+#define A2  GPR14
+
+#Arguments in rdi,rsi,rdx, rcx, r8, r9
+
+START LOCAL
+
+FUNC fastrabbit
+{
+# store pointers to A[0], A[1], A[2] in registers
+mov      A0, [A]        
+mov      A1, [A+8]
+mov      A2, [A+16]
+vmovaps  [A0], xmm0     # back up A0
+vmovaps  [A1], xmm1     # back up A1
+
+# move precalculated tmp values to registers TMP0, TMP1, TMP2
+mov      TMPA, [TMP]
+mov      TMPB, [TMP+8]
+movaps   TMP0, xmm3     # back up tmp0
+movaps   TMP1, xmm4     # back up tmp1
+movaps   TMP2, xmm5     # back up tmp2
+movaps   MM_R, xmm7     # back up mm
+movaps   A2_R, xmm2     # keep A[2] in register
+
+# store WXC (the x values of three successive voxels in a register
+movaps   WXC, xmm6
+# L is actually not the problem size but the loop counter
+mov      END, L
+
+# generate vector constant 1.0
+pcmpeqw ONE,ONE
+pslld   ONE,25
+psrld   ONE,2
+
+xor   COUNTER, COUNTER
+.align 16
+1:
+#ifdef CODE_ANALYSER
+mov ebx, 111
+.byte 0x64, 0x67, 0x90
+#endif
+
+##
+## Begin loop
+##
+
+##
+## BLOCK: 1. load A[0], A[1], A[2] (kept in register)
+##        2. calculate u, v, w, 1/w
+##        3. increment voxel's x values for next iter
+## 
+movaps FPR1, [A0]       # load A[0] from memory
+movaps FPR2, [A1]       # load A[1] from memory
+movaps FPR3, A2_R       # load A[2] from register
+mulps  FPR3, WXC        # A[2] * x
+addps  FPR3, TMP2       # w = tmp2 + A[2] * x
+mulps  FPR1, WXC        # A[0] * x
+addps  FPR1, TMP0       # u = tmp0 + A[0] * x
+mulps  FPR2, WXC        # A[1] * x
+addps  FPR2, TMP1       # v = tmp1 + A[1] * x
+rcpps  W_IN, FPR3       # 1/w using RCPPS
+#movaps FPR5, W_IN      # we don't use Newton-Raphson
+#addps  W_IN, FPR5      # we don't use Newton-Raphson
+#mulps  FPR5, FPR5      # we don't use Newton-Raphson
+#mulps  FPR5, FPR4      # we don't use Newton-Raphson
+#subps  W_IN, FPR5      # we don't use Newton-Raphson
+addps  WXC, MM_R        # we can already increment the voxel's x value for the next iteration, because we don't need them anymore in this iteration
+##
+## BLOCK: 1. loaded A[0], A[1], A[2] 
+##        2. calculated u in FPR1, v in FPR2, w in FPR3, 1/w in W_IN alias FPR12
+##        3. incremented voxel's x values for next iter
+## 
+
+##
+## BLOCK: 1. calculate ix = u/w and iy = v/x
+##        2. calculate iix = (int)ix and iiy = (int)iy
+##        3. calculate scaly = iy - iiy
+##
+##  we will calculate scalx only when it is neede to avoid register shortage
+##
+mulps  FPR1, W_IN           # ix = u/w
+mulps  FPR2, W_IN           # iy = v/w
+roundps  FPR3, FPR1, 0x03   # iix = (int)ix 
+roundps  FPR4, FPR2, 0x03   # iiy = (int)iy
+subps  FPR2, FPR4           # scaly = iy - iiy
+##
+## BLOCK: 1. calculated ix in FPR1 = u/w and iy in FPR2 = v/x
+##        2. calculated iix in FPR3 = (int)ix and iiy in FPR4 = (int)iy
+##        3. calculate scaly in FPR2 = iy - iiy
+##
+
+##
+## In the block above, we calculated the iix and iiy coordinates
+## for the four voxels in our SSE register.
+## 
+## In the following blocks we will calculate the valt and valb
+## indices for the four voxels.
+##
+
+##
+## BLOCK: 1. calculate indices valtl ((iiy+1) * imagewidth + iix)
+## 
+movaps   FPR6, ONE          # set FPR6 to (1.0f, 1.0f, 1.0f, 1.0f)
+mov      GPR1, ISX          # load pointer to imagewidth from stack
+mulps    FPR4, [GPR1]       # iiy = iiy * imagewidth
+movaps   FPR5, [GPR1]       # FPR5 = imagewidth
+addps    FPR5, FPR4         # FPR5 = imagewidth * (iiy+1)
+addps    FPR5, FPR3         # FPR5 = (iiy+1) * imagewidth + iix
+cvtps2dq FPR7, FPR5         # FPR7 = (int)valtl
+##
+## BLOCK: 1. calculated indices valt in FPR7 ((iiy+1) * imagewidth + iix)
+## 
+
+##
+## BLOCK: 1. calculate indices valbl (iiy * imagewidth + iix)
+## 
+addps    FPR4, FPR3         # FPR4 = iiy * imagewidth + iix
+cvtps2dq FPR8, FPR4         # FPR8 = (int)valbl
+##
+## BLOCK: 1. calculated indices valb in FPR8 (iiy * imagewidth + iix)
+## 
+
+## We have now calculated the valtl and valbl indices for all voxels.
+## We can now load the values stored in the projection image form there.
+## To give it a twist (to benefit performance) we're going to load
+## valtl[0], valtr[0], valtl[2], valtr[2] into a FPR. We'll then
+## duplicate the scaly values for voxels 0 and 2 into a FPR:
+## 1-scaly[0], 1-scaly[0], 1-scaly[2], 1-scaly[2].
+## We then multiply the FPRs and get SCALEDY(valtl[0], valtr[0], valtl[2], valtr[2])
+##
+
+##
+## seems to fit in pretty good here (performance-wise)
+## calculate scalx, set FPR4 to 1, 1, 1, 1
+##
+movaps  FPR4, ONE           # FPR4 = 1, 1, 1, 1
+subps  FPR1, FPR3           # scalx = ix - iix
+
+##
+## we have now calculated valtl and valbl for all four voxels.
+## to actually load the values at these coordinates we have to
+## move the indices into a general purpose register.
+##
+## to get them in there, we save them from the sse register to memory (l1$)
+## and load them from there into a general purpose register.
+##
+movaps    [TMPA], FPR7      # [TMPA] = valbl
+movaps    [TMPB], FPR8      # [TMPB] = valtl
+
+##
+## BLOCK: 1. set FPR7 = scaly[0], scaly[0], scaly[2], scaly[2]
+##        2. load (valtl[0], valtr[0], valtl[2], valtr[2])
+##        3. calculate (1-scaly[0], 1-scaly[0], 1-scaly[2], 1-scaly[2])
+##        4. calculate (valtl[0], valtr[0], valtl[2], valtr[2]) * (1-scaly[0], 1-scaly[0], 1-scaly[2], 1-scaly[2])
+##
+movsldup  FPR7, FPR2        # FPR7 = (scaly[0], scaly[0], scaly[2], scaly[2])
+movsxd    GPR1, [TMPB]      # GPR1 = valtl[0]
+movlps FPR3, [I + GPR1 * 4] # FPR3[LOW] = [I + valtl[0] * sizeof(float)]
+subps    FPR6, FPR7         # FPR6 = (1 - scaly[0], 1 - scaly[0], 1 - scaly[2], 1 - scaly[2])
+movsxd    GPR1, [TMPB + 8]  # GPR1 = valtl[2]
+movhps FPR3, [I + GPR1 * 4] # FPR3[HIGH] = [I + valtl[2] * sizeof(float)]
+mulps    FPR3, FPR6         # FPR33 = SCALEDY(valtl[0], valtr[0], valtl[2], valtr[2])
+##
+## BLOCK: 1. set FPR7 = scaly[0], scaly[0], scaly[2], scaly[2]
+##        2. loaded (valtl[0], valtr[0], valtl[2], valtr[2]) in FPR3
+##        3. calculated (1-scaly[0], 1-scaly[0], 1-scaly[2], 1-scaly[2]) in FPR6
+##        4. calculated (valtl[0], valtr[0], valtl[2], valtr[2]) * (1-scaly[0], 1-scaly[0], 1-scaly[2], 1-scaly[2]) in FPR3
+##
+
+##
+## We have now calculated SCALEDY(valtl[0], valtr[0], valtl[2], valtr[2])
+## We now continue by loading the bottom values of voxel 0 and voxel 2 in order
+## to calculate SCALEDY(valbl[0], valbr[0], valbl[2], valbr[2])
+##
+movsxd    GPR1, [TMPA]      # GPR1 = valbl[0]
+movlps FPR6, [I + GPR1 * 4] # FPR6[LOW] = valbl[0]
+movsxd    GPR1, [TMPA + 8]  # GPR1 = valbl[2]
+movhps FPR6, [I + GPR1 * 4] # FPR6[HIGH] = valbl[2]
+mulps     FPR6, FPR7        # FPR6 = SCALEDY(valbl[0], valbr[0], valbl[2], valbr[2])
+
+##
+## We have now calculated:
+## 1. SCALEDY(valtl[0], valtr[0], valtl[2], valtr[2])
+## 2. SCALEDY(valbl[0], valbr[0], valbl[2], valbr[2])
+##
+## We do now the exact same for voxels 1 and 3
+##
+movshdup  FPR7, FPR2        # FPR7 = scaly[1], scaly[1], scaly[3], scaly[3]
+addps     FPR6, FPR3        # FPR6 = vall[0], valr[0], vall[2], valr[2]
+subps     FPR4, FPR7        # FPR4 = 1 - scaly[1], 1 - scaly[1], 1 - scaly[3], 1 - scaly[3]
+mulps     W_IN, W_IN        # W_IN = 1/w^2
+
+movsxd       GPR1, [TMPB + 4]   # GPR1 = &valtl[1]
+movlps    FPR8, [I + GPR1 * 4]  # FPR8[LOW] = valtl[1], valtr[1]
+movsxd       GPR1, [TMPB + 12]  # GPR1 = &valtl[3]
+movhps    FPR8, [I + GPR1 * 4]  # FPR8[HIGH] = valtl[3], valtr[3]
+mulps     FPR8, FPR4            # FPR8 = SCALEDY(valtl[1], valtr[1], valtl[3], valtt[3])
+
+##
+## We have now calculated SCALEDY(valtl[1], valtr[1], valtl[3], valtr[3])
+## We now continue by loading the bottom values of voxel 1 and voxel 3 in order
+## to calculate SCALEDY(valbl[1], valbr[1], valbl[3], valbr[3])
+##
+movsxd       GPR1, [TMPA + 4]   # GPR1 = &valbl[1]
+movlps    FPR2, [I + GPR1 * 4]  # FPR2[LOW] = valbl[1], valbr[1]
+movsxd       GPR1, [TMPA + 12]  # GPR1 = &valbl[3]
+movhps    FPR2, [I + GPR1 * 4]  # FPR2[HIGH] = valbl[3], valbr[3]
+mulps    FPR2, FPR7             # FPR2 = SCALEDY(valbl[1], valbr[1], valbl[3], valbr[3])
+addps    FPR2, FPR8             # FPR2 = vall[1], valr[1], vall[3], valr[3]
+
+
+##
+## we now have:
+## FPR6: vall[0], valr[0], vall[2], valr[2]
+## FPR2: vall[1], valr[1], vall[3], valr[3]
+##
+## what we want is:
+## FPRx: vall[0], vall[1], vall[2], vall[3]
+## FPRx: valr[0], valr[1], valr[2], valr[3]
+## FPRx: scalx[0], scalx[1], scalx[2], scalx[3]
+##
+movshdup  FPR8, FPR6        # FPR8 = valr[0], valr[0], valr[2], valr[2]
+movaps    FPR4, ONE           # FPR4 = 1f, 1f, 1f, 1f
+movsldup  FPR3, FPR2        # FPR3 = vall[1], vall[1], vall[3], vall[3]
+blendps   FPR3, FPR6, 0x5   # FPR3 = vall[0], vall[1], vall[2], vall[3]
+blendps   FPR2, FPR8, 0x5   # FPR5 = valr[0], valr[1], valr[2], valr[3]
+
+mulps     FPR2, FPR1        # FPR5 = SCALEDX(valr[0], valr[1], valr[2], valr[3])
+subps     FPR4, FPR1        # FPR4 = 1 - scalx[0], 1 - scalx[1], 1 - scalx[2], 1 - scalx[3]
+mulps     FPR4, FPR3        # FPR4 = SCALEDX(vall[0], vall[1], vall[2], vall[3])
+
+addps     FPR4, FPR2        # FPR4 = val
+mulps     FPR4, W_IN        # FPR4 = val/w^2
+
+# add to VOL
+addps     FPR4, [VOL + INDEX * 4]   # FPR4 = *(&VOL + INDEX * 4) + val/w^2
+movaps    [VOL + INDEX * 4], FPR4   # write back
+
+add       COUNTER, 4
+cmp       COUNTER, END
+jl 1b
+#ifdef CODE_ANALYSER
+mov ebx, 222
+.byte 0x64, 0x67, 0x90
+#endif
+#ifdef KERNEL_CYCLES
+# Move back temporary values, which were overwritten during the proccess
+# of moving the indices into a general-purpose register. If we don't do
+# this, calling fastrabbit() multiple times will cause a SEGFAULT!
+movaps   [TMPA], TMP0
+movaps   [TMPB], TMP1
+#endif
+}
+
+STOP LOCAL
+
