@@ -222,6 +222,15 @@ multi-threaded execution; without it, LolaOMP runs single-threaded.
 
 ## Input data
 
+The input dataset is not included in this repository. To download it, run:
+
+```bash
+./download-input.sh
+```
+
+This downloads the `RabbitInput.tgz` archive (~2.9 GB), extracts it into the
+`RabbitInput/` directory, and removes the archive.
+
 The `RabbitInput/` directory contains the test dataset:
 
 | File                 | Description                              |
