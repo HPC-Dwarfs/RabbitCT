@@ -62,3 +62,4 @@ config.mk
 *.pgm
 *.rctd
 *.png
+.clangd

@@ -2,7 +2,6 @@
  * All rights reserved. This file is part of RabbitCT.
  * Use of this source code is governed by a MIT style
  * license that can be found in the LICENSE file. */
-#include <errno.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -264,7 +263,8 @@ int main(int argc, char **argv)
 
       for (int i = 0; i < sliceSize; i++) {
         float huAx = (slice[i] > 0.0f) ? US_ROUND(hus[0] * slice[i] + hus[1]) : 0.0f;
-        if (huAx > 4095.0f) huAx = 4095.0f;
+        if (huAx > 4095.0f)
+          huAx = 4095.0f;
         uint16_t val = (uint16_t)huAx;
         /* PGM 16-bit requires big-endian byte order */
         row[i] = (uint16_t)((val >> 8) | (val << 8));

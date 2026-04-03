@@ -35,7 +35,7 @@ static uint64_t getCpuSpeed(void)
     RDTSC(stop);
     gettimeofday(&tv2, &tzp);
 
-    result = MIN(result, stop.int64 - start.int64 - cyclesForCpuid);
+    result = MIN(result, stop.int64 - start.int64 - CyclesForCpuid);
   }
 
   return (result) * 1000000 /
@@ -106,7 +106,7 @@ void rabbitTimer_startCycles(CyclesData *time)
   RDTSC(start);
   RDTSC(stop);
 
-  time->base = cyclesForCpuid + (stop.int64 - start.int64 - cyclesForCpuid);
+  time->base = CyclesForCpuid + (stop.int64 - start.int64 - CyclesForCpuid);
   RDTSC(time->start);
 #elif defined(_ARCH_PPC)
   uint32_t tbl, tbu0, tbu1;

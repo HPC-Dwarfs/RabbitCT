@@ -24,6 +24,7 @@
 #include <mach/thread_policy.h>
 #endif
 
+#include "error.h"
 #include "rabbitAffinity.h"
 
 /* #####   EXPORTED VARIABLES   ########################################### */
