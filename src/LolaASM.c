@@ -53,6 +53,10 @@ int lolaAsmPrepare(RabbitCtGlobalData *rcgd)
 
   memoryUtilsZeroPadInit(rcgd, &Padding);
 
+#ifdef SIMD_NAME
+  printf("SIMD instruction set: %s (vector width: %d)\n", SIMD_NAME, VECTORSIZE);
+#endif
+
   return 1;
 }
 

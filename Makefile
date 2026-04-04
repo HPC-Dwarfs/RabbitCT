@@ -52,15 +52,31 @@ OBJ       := $(filter-out $(BUILD_DIR)/LolaISPC.o,$(OBJ))
 endif
 
 # Select assembly kernel matching the SIMD option.
-# Add entries here as new fastrabbit*.s files are introduced.
+# SSE/AVX/AVX512 require x86-64; NEON requires AARCH64.
+ARCH := $(shell uname -m)
 ifeq ($(SIMD),SSE)
-OBJ       += $(patsubst $(SRC_DIR)/%.s, $(BUILD_DIR)/%.o,$(SRC_DIR)/fastRabbitSSE.s)
+ifneq ($(ARCH),x86_64)
+$(error SIMD=SSE requires x86-64 but detected $(ARCH))
+endif
+OBJ       += $(patsubst $(SRC_DIR)/%.S, $(BUILD_DIR)/%.o,$(SRC_DIR)/fastRabbitSSE.S)
 endif
 ifeq ($(SIMD),AVX)
-OBJ       += $(patsubst $(SRC_DIR)/%.s, $(BUILD_DIR)/%.o,$(SRC_DIR)/fastRabbitAVX.s)
+ifneq ($(ARCH),x86_64)
+$(error SIMD=AVX requires x86-64 but detected $(ARCH))
+endif
+OBJ       += $(patsubst $(SRC_DIR)/%.S, $(BUILD_DIR)/%.o,$(SRC_DIR)/fastRabbitAVX.S)
 endif
 ifeq ($(SIMD),AVX512)
-OBJ       += $(patsubst $(SRC_DIR)/%.s, $(BUILD_DIR)/%.o,$(SRC_DIR)/fastRabbitAVX512.s)
+ifneq ($(ARCH),x86_64)
+$(error SIMD=AVX512 requires x86-64 but detected $(ARCH))
+endif
+OBJ       += $(patsubst $(SRC_DIR)/%.S, $(BUILD_DIR)/%.o,$(SRC_DIR)/fastRabbitAVX512.S)
+endif
+ifeq ($(SIMD),NEON)
+ifneq ($(filter $(ARCH),arm64 aarch64),$(ARCH))
+$(error SIMD=NEON requires AARCH64 but detected $(ARCH))
+endif
+OBJ       += $(patsubst $(SRC_DIR)/%.S, $(BUILD_DIR)/%.o,$(SRC_DIR)/fastRabbitNEON.S)
 endif
 SRC       =  $(wildcard $(SRC_DIR)/*.h $(SRC_DIR)/*.c)
 CPPFLAGS := $(CPPFLAGS) $(DEFINES) $(OPTIONS) $(INCLUDES)
@@ -86,9 +102,9 @@ $(BUILD_DIR)/%.s:  %.c
 	$(info ===>  GENERATE ASM  $@)
 	$(CC) -S $(CPPFLAGS) $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o:  %.s $(MAKE_DIR)/include_$(TOOLCHAIN).mk config.mk
+$(BUILD_DIR)/%.o:  %.S $(MAKE_DIR)/include_$(TOOLCHAIN).mk config.mk
 	$(info ===>  ASSEMBLE  $@)
-	$(Q)$(CC) -c $< -o $@
+	$(Q)$(CC) -c $(CPPFLAGS) $< -o $@
 
 # ISPC compilation: .ispc -> .o + generated header
 ifeq ($(ENABLE_ISPC),true)

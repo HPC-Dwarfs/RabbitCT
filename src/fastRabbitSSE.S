@@ -117,5 +117,3 @@ mov  rsp, rbp
 pop rbp
 ret
 .size fastrabbit, .-fastrabbit
-
-

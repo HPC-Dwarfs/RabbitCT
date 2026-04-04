@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #include "algorithmRegistry.h"
 #include "ctFileReader.h"
@@ -32,7 +35,7 @@
   printf("-c\t check error\n");                                                          \
   printf("-C\t Specify line clipping filename\n");                                       \
   printf("-o\t output volume image\n");                                                  \
-  printf("-m\t algorithm name\n\n");                                                      \
+  printf("-m\t algorithm name\n\n");                                                     \
   algorithmRegistryList()
 
 static float volumeResolution(const int problemSize)
@@ -139,6 +142,14 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
+  printf("\n");
+  printf("  (\\(\\         ____       _     _     _ _    ____ _____\n");
+  printf("  ( -.-)      |  _ \\ __ _| |__ | |__ (_) |_ / ___|_   _|\n");
+  printf("  o_(\")(\")    | |_) / _` | '_ \\| '_ \\| | __| |     | |  \n");
+  printf("              |  _ < (_| | |_) | |_) | | |_| |___  | |  \n");
+  printf("              |_| \\_\\__,_|_.__/|_.__/|_|\\__|\\____| |_|  \n");
+  printf("\n");
+
   LIKWID_MARKER_INIT;
   rabbitTimer_init();
 
@@ -201,7 +212,12 @@ int main(int argc, char **argv)
    * BACKPROJECTION LOOP
    * *****************************************************/
   {
-    printf("Running ... this may take some time.\n");
+#ifdef _OPENMP
+    printf("Running threaded with %d threads ... this may take some time.\n",
+        omp_get_max_threads());
+#else
+    printf("Running sequential ... this may take some time.\n");
+#endif
     if (optVerbose) {
       printf("Processing %d projections with size %d X %d\n",
           globalNumberOfProjections,

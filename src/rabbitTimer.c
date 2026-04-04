@@ -107,6 +107,11 @@ void rabbitTimer_startCycles(CyclesDataType *time)
 
   time->base = CyclesForCpuid + (stop.int64 - start.int64 - CyclesForCpuid);
   RDTSC(time->start);
+#else
+  time->base = 0;
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  time->start.int64 = (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
 #endif
 }
 

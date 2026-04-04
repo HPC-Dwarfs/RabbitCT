@@ -26,14 +26,14 @@ Several algorithm variants are included in this repository:
 - **LolaBunny** -- simple reference implementation, straightforward triple-nested loop
 - **LolaOMP** -- optimized implementation with OpenMP parallelization and line-range clipping
 - **LolaOPT** -- further optimized with zero-padded projection images (eliminates bounds checking) and collapse(2) OpenMP scheduling
-- **LolaASM** -- hand-written SIMD assembly kernels (SSE/AVX/AVX512) with cache-blocking
+- **LolaASM** -- hand-written SIMD assembly kernels (SSE/AVX/AVX512/NEON) with cache-blocking
 - **LolaISPC** -- ISPC-vectorized kernel using `foreach` for data-parallel SIMD (requires ISPC compiler)
 
 ## Build
 
 ### Prerequisites
 
-- C compiler: GCC, Clang, or Intel ICX
+- C compiler: GCC, Clang, or Intel ICX (x86-64 or AARCH64)
 - Optional: OpenMP runtime (for the LolaOMP/LolaOPT/LolaASM/LolaISPC algorithms)
 - Optional: [Intel ISPC](https://ispc.github.io/) compiler (for the LolaISPC algorithm)
 - Optional: [LIKWID](https://github.com/RRZE-HPC/likwid) (for hardware performance counter measurements)
@@ -47,7 +47,7 @@ TOOLCHAIN    ?= CLANG          # GCC, CLANG, ICX, NVCC, HIP
 ENABLE_OPENMP ?= false         # set to true for OpenMP support
 ENABLE_LIKWID ?= false         # set to true for LIKWID marker API
 ENABLE_ISPC  ?= false          # set to true for ISPC-vectorized variant
-SIMD         ?= SSE            # SSE, AVX, or AVX512
+SIMD         ?= SSE            # SSE, AVX, AVX512 (x86-64), or NEON (AARCH64)
 ```
 
 Compiler-specific flags are in the `mk/include_<TOOLCHAIN>.mk` files and can be
@@ -237,9 +237,9 @@ load balancing. Requires `-a`.
 ### LolaASM
 
 Uses hand-written SIMD assembly kernels for the inner backprojection loop.
-Separate assembly files are provided for SSE, AVX, and AVX512 instruction sets,
-selected via the `SIMD` option in `config.mk`. Includes cache-blocking for
-improved locality. Requires `-a`.
+Separate assembly files are provided for SSE, AVX, and AVX512 (x86-64) and NEON
+(AARCH64) instruction sets, selected via the `SIMD` option in `config.mk`.
+Includes cache-blocking for improved locality. Requires `-a`.
 
 ### LolaISPC
 
