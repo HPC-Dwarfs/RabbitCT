@@ -16,8 +16,8 @@
 #include "rabbitTimer.h"
 #endif
 
-static OutShadow Shadow;
-static LineRange **Range;
+static OutShadowType Shadow;
+static LineRangeType **Range;
 static ZeroPaddingType Padding;
 static float *PaddedImg;
 
@@ -38,14 +38,14 @@ int lolaOmpPrepare(RabbitCtGlobalData *rcgd)
 
   /* Allocate N * L * L * sizeof(LineRange) bytes of memory:
    * For each projection we need L * L LineRanges */
-  if ((Range = (LineRange **)malloc(rcgd->numberOfProjections * sizeof(LineRange *))) ==
-      NULL) {
+  if ((Range = (LineRangeType **)malloc(
+           rcgd->numberOfProjections * sizeof(LineRangeType *))) == NULL) {
     perror("malloc");
     exit(EXIT_FAILURE);
   }
   for (int i = 0; i < rcgd->numberOfProjections; i++) {
-    if ((Range[i] = (LineRange *)malloc(
-             rcgd->problemSize * rcgd->problemSize * sizeof(LineRange))) == NULL) {
+    if ((Range[i] = (LineRangeType *)malloc(
+             rcgd->problemSize * rcgd->problemSize * sizeof(LineRangeType))) == NULL) {
       perror("malloc");
       exit(EXIT_FAILURE);
     }
@@ -112,11 +112,11 @@ int lolaOmpBackprojection(RabbitCtGlobalData *rcgd)
             continue;
 
           // bilinear interpolation
-          float alpha = ix - iix;
-          float beta  = iy - iiy;
+          float alpha  = ix - iix;
+          float beta   = iy - iiy;
           const int iw = (int)imageWidth;
 
-          float val = 0.0f;
+          float val    = 0.0f;
           if (iix >= 0 && iix < iw && iiy >= 0 && iiy < (int)imageHeight)
             val += (1.0f - alpha) * (1.0f - beta) * i[iiy * iw + iix];
           if (iix + 1 < iw && iix + 1 >= 0 && iiy >= 0 && iiy < (int)imageHeight)

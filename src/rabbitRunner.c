@@ -10,6 +10,7 @@
 
 #include "algorithmRegistry.h"
 #include "ctFileReader.h"
+#include "ctFileReader_types.h"
 #include "likwid-marker.h"
 #include "memoryUtils.h"
 #include "rabbitProgress.h"
@@ -31,7 +32,8 @@
   printf("-c\t check error\n");                                                          \
   printf("-C\t Specify line clipping filename\n");                                       \
   printf("-o\t output volume image\n");                                                  \
-  printf("-m\t algorithm name (e.g. LolaREF)\n\n")
+  printf("-m\t algorithm name\n\n");                                                      \
+  algorithmRegistryList()
 
 static float volumeResolution(const int problemSize)
 {
@@ -77,7 +79,7 @@ int main(int argc, char **argv)
   double error           = 0.0;
   double maxError        = 0.0;
   uint64_t numberOfVoxel = 0;
-  RabbitCtFile inputFile;
+  RabbitCtFileType inputFile;
 
   if (argc == 1) {
     HELP_MSG;
@@ -154,7 +156,7 @@ int main(int argc, char **argv)
   numberOfVoxel    = size * size * size;
   memoryUtilsAllocate(&data.volumeData, numberOfVoxel);
 
-  ctFileReader_openFile(inFilename, &inputFile);
+  ctFileReaderOpenFile(inFilename, &inputFile);
 
   globalNumberOfProjections = inputFile.header.numberOfImages;
   data.imageWidth           = inputFile.header.imageDimension[0];
@@ -173,17 +175,17 @@ int main(int argc, char **argv)
     data.numberOfProjections = globalNumberOfProjections;
     data.globalGeometry =
         (double *)malloc(globalNumberOfProjections * 12 * sizeof(double));
-    RabbitCtFile geometryFile;
-    ctFileReader_openFile(analysisFile, &geometryFile);
-    ctFileReader_readGeometry(&geometryFile, data.globalGeometry);
-    ctFileReader_close(&geometryFile);
+    RabbitCtFileType geometryFile;
+    ctFileReaderOpenFile(analysisFile, &geometryFile);
+    ctFileReaderReadGeometry(&geometryFile, data.globalGeometry);
+    ctFileReaderClose(&geometryFile);
   }
 
   /********************************************************
    * PREPARE ALGORITHM
    * *****************************************************/
   if (FncPrepareAlgorithm != NULL) {
-    CyclesData cycleData;
+    CyclesDataType cycleData;
 
     rabbitTimer_startCycles(&cycleData);
     FncPrepareAlgorithm(&data);
@@ -213,7 +215,7 @@ int main(int argc, char **argv)
     }
 
     int counter = globalNumberOfProjections;
-    CyclesData cycleData;
+    CyclesDataType cycleData;
     data.numberOfProjections = bufferSize;
     data.projectionBuffer    = (Projection *)malloc(bufferSize * sizeof(Projection));
 
@@ -232,7 +234,7 @@ int main(int argc, char **argv)
        * BUFFER PROJECTIONS
        * *****************************************************/
       for (int i = 0; i < bufferSize; i++) {
-        data.projectionBuffer[i].id = ctFileReader_readImage(
+        data.projectionBuffer[i].id = ctFileReaderReadImage(
             &inputFile, data.projectionBuffer[i].matrix, data.projectionBuffer[i].image);
       }
       rabbitTimer_startCycles(&cycleData);

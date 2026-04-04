@@ -14,17 +14,17 @@ typedef union {
     uint32_t lo, hi;
   } int32; /** two 32 bit unsigned integers used
                                         for register values */
-} TscCounter;
+} TscCounterType;
 
 typedef struct {
   struct timeval before;
   struct timeval after;
-} TimerData;
+} TimerDataType;
 
 typedef struct {
-  TscCounter start;
-  TscCounter stop;
+  TscCounterType start;
+  TscCounterType stop;
   uint64_t base;
-} CyclesData;
+} CyclesDataType;
 
 #endif /*RABBITTIMER_TYPES_H*/

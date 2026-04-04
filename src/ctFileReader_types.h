@@ -12,12 +12,12 @@ typedef struct {
   uint32_t imageDimension[2]; /* projection image dimension */
   uint32_t numberOfImages; /* number of projection images */
   float HUScalingFactors[2]; /* HU scaling factors */
-} RabbitCtHeader;
+} RabbitCtHeaderType;
 
 typedef struct {
-  RabbitCtHeader header;
+  RabbitCtHeaderType header;
   int imageSize;
   FILE *file;
-} RabbitCtFile;
+} RabbitCtFileType;
 
 #endif

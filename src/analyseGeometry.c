@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void initCuboid(Point3D *s, Point3D corners[], Point3D *p)
+static void initCuboid(Point3DType *s, Point3DType corners[], Point3DType *p)
 {
   corners[0].x = p->x;
   corners[0].y = p->y;
@@ -47,17 +47,17 @@ static void initCuboid(Point3D *s, Point3D corners[], Point3D *p)
   corners[7].z = p->z + s->z - 1;
 }
 
-void computeShadowOfProjection(RabbitCtGlobalData *data, OutShadow *shadow)
+void computeShadowOfProjection(RabbitCtGlobalData *data, OutShadowType *shadow)
 {
-  Point3D size = { data->problemSize, data->problemSize, data->problemSize };
-  Point3D corners[8];
-  Point3D principalCorner = { 0, 0, 0 };
-  float rL                = data->voxelSize;
-  float oL                = data->O_Index;
-  double minU             = data->imageWidth + 1;
-  double minV             = data->imageHeight + 1;
-  double maxU             = -2;
-  double maxV             = -2;
+  Point3DType size = { data->problemSize, data->problemSize, data->problemSize };
+  Point3DType corners[8];
+  Point3DType principalCorner = { 0, 0, 0 };
+  float rL                    = data->voxelSize;
+  float oL                    = data->O_Index;
+  double minU                 = data->imageWidth + 1;
+  double minV                 = data->imageHeight + 1;
+  double maxU                 = -2;
+  double maxV                 = -2;
 
   initCuboid(&size, corners, &principalCorner);
 
@@ -65,15 +65,15 @@ void computeShadowOfProjection(RabbitCtGlobalData *data, OutShadow *shadow)
     double *aN = data->globalGeometry + (view * 12);
 
     for (int co = 0; co < 8; co++) {
-      Point3D p = corners[co];
+      Point3DType p = corners[co];
 
-      double x  = oL + (double)p.x * rL;
-      double y  = oL + (double)p.y * rL;
-      double z  = oL + (double)p.z * rL;
+      double x      = oL + (double)p.x * rL;
+      double y      = oL + (double)p.y * rL;
+      double z      = oL + (double)p.z * rL;
 
-      double wN = aN[2] * x + aN[5] * y + aN[8] * z + aN[11];
-      double uN = (aN[0] * x + aN[3] * y + aN[6] * z + aN[9]) / wN;
-      double vN = (aN[1] * x + aN[4] * y + aN[7] * z + aN[10]) / wN;
+      double wN     = aN[2] * x + aN[5] * y + aN[8] * z + aN[11];
+      double uN     = (aN[0] * x + aN[3] * y + aN[6] * z + aN[9]) / wN;
+      double vN     = (aN[1] * x + aN[4] * y + aN[7] * z + aN[10]) / wN;
 
       if (uN < minU)
         minU = uN;
@@ -99,7 +99,7 @@ void computeShadowOfProjection(RabbitCtGlobalData *data, OutShadow *shadow)
   iix = (int)u_n;                                                                        \
   iiy = (int)v_n
 
-void computeLineRanges(RabbitCtGlobalData *data, LineRange **range)
+void computeLineRanges(RabbitCtGlobalData *data, LineRangeType **range)
 {
   unsigned int l   = data->problemSize;
   unsigned int isx = data->imageWidth;
@@ -156,11 +156,11 @@ void computeLineRanges(RabbitCtGlobalData *data, LineRange **range)
     /* verify file size */
     fseek(fClipFile, 0L, SEEK_END);
     int fsize = ftell(fClipFile);
-    if (fsize != n * l * l * sizeof(LineRange)) {
+    if (fsize != n * l * l * sizeof(LineRangeType)) {
       printf("corrupted file %s: size is %lu (should be %lu)\n",
           clipFile,
           (unsigned long)fsize,
-          n * l * l * sizeof(LineRange));
+          n * l * l * sizeof(LineRangeType));
       exit(EXIT_FAILURE);
     }
     fseek(fClipFile, 0L, SEEK_SET);
@@ -172,7 +172,7 @@ void computeLineRanges(RabbitCtGlobalData *data, LineRange **range)
       for (int j = 0; j < l; j++) {
 #pragma omp ordered
         {
-          nbytes = fread(range[i] + j * l, sizeof(LineRange), l, fClipFile);
+          nbytes = fread(range[i] + j * l, sizeof(LineRangeType), l, fClipFile);
           if (nbytes != l) {
             fprintf(stderr, "error reading from %s: ", clipFile);
             perror("");
@@ -283,7 +283,7 @@ void computeLineRanges(RabbitCtGlobalData *data, LineRange **range)
     /* Write LineRange into file. */
     int nbytes;
     for (int i = 0; i < n; ++i) {
-      nbytes = fwrite(range[i], sizeof(LineRange), l * l, fClipFile);
+      nbytes = fwrite(range[i], sizeof(LineRangeType), l * l, fClipFile);
       if (nbytes != l * l) {
         fprintf(stderr, "error writing to %s: ", clipFile);
         perror("");
@@ -291,7 +291,7 @@ void computeLineRanges(RabbitCtGlobalData *data, LineRange **range)
       }
     }
     printf("Wrote %lu bytes of clipping data to %s\n",
-        n * l * l * sizeof(LineRange),
+        n * l * l * sizeof(LineRangeType),
         clipFile);
     fclose(fClipFile);
   }

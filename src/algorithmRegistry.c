@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "algorithmRegistry.h"
-#include "types.h"
 
 /* ---- forward declarations for each compiled-in algorithm ---- */
 extern int lolaOmpPrepare(RabbitCtGlobalData *);
@@ -17,6 +16,20 @@ extern int lolaBunnyPrepare(RabbitCtGlobalData *);
 extern int lolaBunnyBackprojection(RabbitCtGlobalData *);
 extern int lolaBunnyFinish(RabbitCtGlobalData *);
 
+extern int lolaOptPrepare(RabbitCtGlobalData *);
+extern int lolaOptBackprojection(RabbitCtGlobalData *);
+extern int lolaOptFinish(RabbitCtGlobalData *);
+
+extern int lolaAsmPrepare(RabbitCtGlobalData *);
+extern int lolaAsmBackprojection(RabbitCtGlobalData *);
+extern int lolaAsmFinish(RabbitCtGlobalData *);
+
+#ifdef ENABLE_ISPC
+extern int lolaIspcPrepare(RabbitCtGlobalData *);
+extern int lolaIspcBackprojection(RabbitCtGlobalData *);
+extern int lolaIspcFinish(RabbitCtGlobalData *);
+#endif
+
 /* ---- global function pointer variables ---- */
 FncPrepareAlgorithmType FncPrepareAlgorithm;
 FncAlgorithmIterationType FncAlgorithmIteration;
@@ -24,9 +37,14 @@ FncFinishAlgorithmType FncFinishAlgorithm;
 
 /* ---- static registry: add new algorithms here ---- */
 static const AlgorithmEntryType S_ALGORITHMS[] = {
-  { "LolaOMP",    lolaOmpPrepare,    lolaOmpBackprojection,    lolaOmpFinish    },
-  { "LolaBunny",  lolaBunnyPrepare,  lolaBunnyBackprojection,  lolaBunnyFinish  },
-  { NULL,         NULL,              NULL,                     NULL             }  /* sentinel */
+  { "LolaOMP",   lolaOmpPrepare,   lolaOmpBackprojection,   lolaOmpFinish   },
+  { "LolaBunny", lolaBunnyPrepare, lolaBunnyBackprojection, lolaBunnyFinish },
+  { "LolaOPT",   lolaOptPrepare,   lolaOptBackprojection,   lolaOptFinish   },
+  { "LolaASM",   lolaAsmPrepare,   lolaAsmBackprojection,   lolaAsmFinish   },
+#ifdef ENABLE_ISPC
+  { "LolaISPC",  lolaIspcPrepare,  lolaIspcBackprojection,  lolaIspcFinish  },
+#endif
+  { NULL,        NULL,             NULL,                    NULL            }  /* sentinel */
 };
 
 int algorithmRegistryFind(const char *name)
@@ -40,9 +58,14 @@ int algorithmRegistryFind(const char *name)
     }
   }
   printf("Unknown algorithm: %s\n", name);
+  algorithmRegistryList();
+  return 0;
+}
+
+void algorithmRegistryList(void)
+{
   printf("Available algorithms:\n");
   for (int i = 0; S_ALGORITHMS[i].name != NULL; i++) {
     printf("  %s\n", S_ALGORITHMS[i].name);
   }
-  return 0;
 }

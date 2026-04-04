@@ -19,5 +19,6 @@ extern FncAlgorithmIterationType FncAlgorithmIteration;
 extern FncFinishAlgorithmType FncFinishAlgorithm;
 
 extern int algorithmRegistryFind(const char *name);
+extern void algorithmRegistryList(void);
 
 #endif

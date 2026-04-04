@@ -9,7 +9,7 @@
 #include "rabbitCt.h"
 #define LR_PREFIX "RabbitInput/LineRange"
 
-extern void computeShadowOfProjection(RabbitCtGlobalData *data, OutShadow *shadow);
-extern void computeLineRanges(RabbitCtGlobalData *data, LineRange **range);
+extern void computeShadowOfProjection(RabbitCtGlobalData *data, OutShadowType *shadow);
+extern void computeLineRanges(RabbitCtGlobalData *data, LineRangeType **range);
 
 #endif /*ANALYSE_GEOMETRY_H*/

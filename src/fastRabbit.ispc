@@ -7,7 +7,6 @@ export void Backprojection(
         uniform int stop,
 		uniform float MM,         /* voxel size */
 		uniform unsigned int imageWidth,
-		uniform unsigned int imageHeight,
 		uniform float A0,
 		uniform float A1,
 		uniform float A2,
@@ -16,7 +15,7 @@ export void Backprojection(
 		uniform float tmp_w,
 		uniform float O_Index,
 		uniform float* uniform VOL,       /* voxel volume data */
-		uniform float* uniform I          /* image data */
+		const uniform float* uniform I    /* image data */
 		)
 {
 

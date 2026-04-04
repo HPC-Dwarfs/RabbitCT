@@ -5,13 +5,14 @@
 #ifndef MEMORYUTILS_TYPES_H
 #define MEMORYUTILS_TYPES_H
 
-#include "analyseGeometry_types.h"
 #include <stdint.h>
+
+#include "analyseGeometry_types.h"
 
 typedef struct {
   float ***buffern;
   float **buffer;
-  OutShadow extend;
+  OutShadowType extend;
   uint64_t paddedSize;
   int startOffset;
   int lineOffset;

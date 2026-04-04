@@ -95,9 +95,7 @@ static void nodeMeminfo(int node, uint32_t *totalMemory, uint32_t *freeMemory)
   char filename[256];
   char line[256];
 
-  snprintf(filename, sizeof(filename),
-      "/sys/devices/system/node/node%d/meminfo",
-      node);
+  snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%d/meminfo", node);
 
   if (NULL != (fp = fopen(filename, "r"))) {
     while (fgets(line, sizeof(line), fp)) {
@@ -123,12 +121,10 @@ static int nodeProcessorList(int node, uint32_t **list)
   int cursor   = 0;
   int unitSize = 32; /* 8 nibbles */
 
-  *list = (uint32_t *)malloc(MAX_NUM_THREADS * sizeof(uint32_t));
+  *list        = (uint32_t *)malloc(MAX_NUM_THREADS * sizeof(uint32_t));
 
   /* the cpumap interface should be always there */
-  snprintf(filename, sizeof(filename),
-      "/sys/devices/system/node/node%d/cpumap",
-      node);
+  snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%d/cpumap", node);
 
   if (NULL != (fp = fopen(filename, "r"))) {
     if (fgets(buf, sizeof(buf), fp) == NULL) {
@@ -140,24 +136,24 @@ static int nodeProcessorList(int node, uint32_t **list)
     /* parse comma-separated hex words from right to left */
     int len = (int)strlen(buf);
     /* strip trailing whitespace/newline */
-    while (len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r' ||
-                          buf[len - 1] == ' ')) {
+    while (len > 0 &&
+           (buf[len - 1] == '\n' || buf[len - 1] == '\r' || buf[len - 1] == ' ')) {
       buf[--len] = '\0';
     }
 
     /* split on commas, collect token pointers in reverse order */
     char *tokens[256];
-    int ntokens    = 0;
-    char *saveptr  = NULL;
-    char *tok      = strtok_r(buf, ",", &saveptr);
+    int ntokens   = 0;
+    char *saveptr = NULL;
+    char *tok     = strtok_r(buf, ",", &saveptr);
     while (tok && ntokens < 256) {
       tokens[ntokens++] = tok;
       tok               = strtok_r(NULL, ",", &saveptr);
     }
 
     for (int i = ntokens - 1; i >= 0; i--) {
-      char *endptr       = NULL;
-      unsigned long val  = strtoul(tokens[i], &endptr, 16);
+      char *endptr      = NULL;
+      unsigned long val = strtoul(tokens[i], &endptr, 16);
 
       if ((errno != 0 && val == LONG_MAX) || (errno != 0 && val == 0)) {
         ERROR;

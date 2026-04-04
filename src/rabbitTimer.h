@@ -5,7 +5,7 @@
 #ifndef RABBITTIMER_H
 #define RABBITTIMER_H
 
-#include "rabbitHelper_types.h"
+#include "rabbitTimer_types.h"
 #include <sys/time.h>
 
 #ifdef __x86_64
@@ -29,13 +29,13 @@
 #endif
 
 extern void rabbitTimer_init(void);
-extern void rabbitTimer_start(TimerData *time);
-extern void rabbitTimer_stop(TimerData *time);
-extern float rabbitTimer_print(TimerData *timer);
-extern void rabbitTimer_startCycles(CyclesData *cycles);
-extern void rabbitTimer_stopCycles(CyclesData *cycles);
-extern uint64_t rabbitTimer_printCyclesTime(CyclesData *cycles);
-extern uint64_t rabbitTimer_printCycles(CyclesData *cycles);
+extern void rabbitTimer_start(TimerDataType *time);
+extern void rabbitTimer_stop(TimerDataType *time);
+extern float rabbitTimer_print(TimerDataType *timer);
+extern void rabbitTimer_startCycles(CyclesDataType *cycles);
+extern void rabbitTimer_stopCycles(CyclesDataType *cycles);
+extern uint64_t rabbitTimer_printCyclesTime(CyclesDataType *cycles);
+extern uint64_t rabbitTimer_printCycles(CyclesDataType *cycles);
 extern uint64_t rabbitTimer_getCpuClock(void);
 extern uint64_t rabbitTimer_getCpuidCycles(void);
 

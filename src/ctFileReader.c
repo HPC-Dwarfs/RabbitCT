@@ -9,13 +9,13 @@
 
 static int CurrentImage = 0;
 
-void ctFileReader_openFile(char *filename, RabbitCtFile *ctFile)
+void ctFileReaderOpenFile(char *filename, RabbitCtFileType *ctFile)
 {
 
   ctFile->file = fopen(filename, "re");
 
   if (ctFile->file != NULL) {
-    if (!fread((void *)&ctFile->header, sizeof(RabbitCtHeader), 1, ctFile->file)) {
+    if (!fread((void *)&ctFile->header, sizeof(RabbitCtHeaderType), 1, ctFile->file)) {
       printf("Failed to read file header! Exit.\n");
       exit(EXIT_FAILURE);
     }
@@ -33,7 +33,7 @@ void ctFileReader_openFile(char *filename, RabbitCtFile *ctFile)
       ctFile->header.imageDimension[1]);
 }
 
-void ctFileReader_readGeometry(RabbitCtFile *ctFile, double *projectionData)
+void ctFileReaderReadGeometry(RabbitCtFileType *ctFile, double *projectionData)
 {
   if (!fread((void *)projectionData,
           12 * sizeof(double),
@@ -44,7 +44,7 @@ void ctFileReader_readGeometry(RabbitCtFile *ctFile, double *projectionData)
   }
 }
 
-int ctFileReader_readImage(RabbitCtFile *ctFile, double *matrix, float *image)
+int ctFileReaderReadImage(RabbitCtFileType *ctFile, double *matrix, float *image)
 {
   CurrentImage++;
 
@@ -171,7 +171,7 @@ ctFileReader_reposition(int imageNumber)
 }
 #endif
 
-void ctFileReader_close(RabbitCtFile *ctFile)
+void ctFileReaderClose(RabbitCtFileType *ctFile)
 {
   fclose(ctFile->file);
 }

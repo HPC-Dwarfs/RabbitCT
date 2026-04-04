@@ -5,11 +5,11 @@
 #ifndef CTFILEREADER_H
 #define CTFILEREADER_H
 
-#include "types.h"
+#include "ctFileReader_types.h"
 
-extern void ctFileReader_openFile(char *filename, RabbitCtFile *data);
-extern int ctFileReader_readImage(RabbitCtFile *ctFile, double *matrix, float *image);
-extern void ctFileReader_readGeometry(RabbitCtFile *ctFile, double *projectionData);
-extern void ctFileReader_close(RabbitCtFile *ctFile);
+extern void ctFileReaderOpenFile(char *filename, RabbitCtFileType *data);
+extern int ctFileReaderReadImage(RabbitCtFileType *ctFile, double *matrix, float *image);
+extern void ctFileReaderReadGeometry(RabbitCtFileType *ctFile, double *projectionData);
+extern void ctFileReaderClose(RabbitCtFileType *ctFile);
 
 #endif /* CTFILEREADER_H */

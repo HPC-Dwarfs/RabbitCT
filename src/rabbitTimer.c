@@ -3,10 +3,9 @@
  * Use of this source code is governed by a MIT style
  * license that can be found in the LICENSE file. */
 /* #####   HEADER FILE INCLUDES   ######################################### */
-#include <stdio.h>
-#include <stdlib.h>
 #include <time.h>
 
+#include "rabbitHelper_types.h"
 #include "rabbitTimer.h"
 
 /* #####   VARIABLES  -  LOCAL TO THIS SOURCE FILE   ###################### */
@@ -20,8 +19,8 @@ static uint64_t getCpuSpeed(void)
 {
 #ifdef __x86_64
   int i;
-  TscCounter start;
-  TscCounter stop;
+  TscCounterType start;
+  TscCounterType stop;
   uint64_t result = 0xFFFFFFFFFFFFFFFFULL;
   struct timeval tv1;
   struct timeval tv2;
@@ -67,8 +66,8 @@ static uint64_t getCpuidCycles(void)
 {
 #ifdef __x86_64
   int i;
-  TscCounter start;
-  TscCounter stop;
+  TscCounterType start;
+  TscCounterType stop;
   uint64_t result = 1000000000ULL;
 
   for (i = 0; i < 5; i++) {
@@ -96,11 +95,11 @@ void rabbitTimer_init(void)
   CpuClock       = getCpuSpeed();
 }
 
-void rabbitTimer_startCycles(CyclesData *time)
+void rabbitTimer_startCycles(CyclesDataType *time)
 {
 #ifdef __x86_64
-  TscCounter start;
-  TscCounter stop;
+  TscCounterType start;
+  TscCounterType stop;
   getCpuidCycles();
 
   RDTSC(start);
@@ -108,25 +107,10 @@ void rabbitTimer_startCycles(CyclesData *time)
 
   time->base = CyclesForCpuid + (stop.int64 - start.int64 - CyclesForCpuid);
   RDTSC(time->start);
-#elif defined(_ARCH_PPC)
-  uint32_t tbl, tbu0, tbu1;
-  do {
-    __asm__ __volatile__("mftbu %0" : "=r"(tbu0));
-    __asm__ __volatile__("mftb %0" : "=r"(tbl));
-    __asm__ __volatile__("mftbu %0" : "=r"(tbu1));
-  } while (tbu0 != tbu1);
-
-  time->base        = 0;
-  time->start.int64 = (((uint64_t)tbu0) << 32) | tbl;
-#else
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  time->base        = 0;
-  time->start.int64 = (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
 #endif
 }
 
-void rabbitTimer_stopCycles(CyclesData *time)
+void rabbitTimer_stopCycles(CyclesDataType *time)
 {
 #ifdef __x86_64
   RDTSC(time->stop);
@@ -146,7 +130,7 @@ void rabbitTimer_stopCycles(CyclesData *time)
 #endif
 }
 
-void rabbitTimer_start(TimerData *time)
+void rabbitTimer_start(TimerDataType *time)
 {
   gettimeofday(&(time->before), NULL);
 
@@ -155,7 +139,7 @@ void rabbitTimer_start(TimerData *time)
 #endif
 }
 
-void rabbitTimer_stop(TimerData *time)
+void rabbitTimer_stop(TimerDataType *time)
 {
   gettimeofday(&(time->after), NULL);
 
@@ -164,7 +148,7 @@ void rabbitTimer_stop(TimerData *time)
 #endif
 }
 
-float rabbitTimer_print(TimerData *time)
+float rabbitTimer_print(TimerDataType *time)
 {
   long int sec;
   float timeDuration;
@@ -182,12 +166,12 @@ float rabbitTimer_print(TimerData *time)
   return timeDuration * 0.000001F;
 }
 
-uint64_t rabbitTimer_printCycles(CyclesData *time)
+uint64_t rabbitTimer_printCycles(CyclesDataType *time)
 {
   return time->stop.int64 - time->start.int64 - time->base;
 }
 
-uint64_t rabbitTimer_printCyclesTime(CyclesData *time)
+uint64_t rabbitTimer_printCyclesTime(CyclesDataType *time)
 {
   uint64_t cycles = time->stop.int64 - time->start.int64 - time->base;
   return cycles * 1000000ULL / CpuClock;

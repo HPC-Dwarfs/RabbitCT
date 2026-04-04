@@ -29,7 +29,39 @@ INCLUDES  += -I$(SRC_DIR)/includes -I$(SRC_DIR) -I$(BUILD_DIR)
 
 VPATH     = $(SRC_DIR)
 ASM       = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.s,$(wildcard $(SRC_DIR)/*.c))
-OBJ       = $(filter-out $(BUILD_DIR)/kernels-%.o,$(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o,$(wildcard $(SRC_DIR)/*.c)))
+OBJ       = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o,$(wildcard $(SRC_DIR)/*.c))
+
+# ISPC support: compile fastRabbit.ispc and include LolaISPC variant
+ifeq ($(ENABLE_ISPC),true)
+ISPC      ?= ispc
+ISPCFLAGS  = --pic --opt=fast-math
+ifeq ($(SIMD),SSE)
+ISPCFLAGS += --target=sse4-i32x4
+endif
+ifeq ($(SIMD),AVX)
+ISPCFLAGS += --target=avx2-i32x8
+endif
+ifeq ($(SIMD),AVX512)
+ISPCFLAGS += --target=avx512skx-i32x16
+endif
+OBJ       += $(BUILD_DIR)/fastRabbit.o
+DEFINES   += -DENABLE_ISPC
+else
+# Exclude LolaISPC.c when ISPC is disabled (missing symbols)
+OBJ       := $(filter-out $(BUILD_DIR)/LolaISPC.o,$(OBJ))
+endif
+
+# Select assembly kernel matching the SIMD option.
+# Add entries here as new fastrabbit*.s files are introduced.
+ifeq ($(SIMD),SSE)
+OBJ       += $(patsubst $(SRC_DIR)/%.s, $(BUILD_DIR)/%.o,$(SRC_DIR)/fastRabbitSSE.s)
+endif
+ifeq ($(SIMD),AVX)
+OBJ       += $(patsubst $(SRC_DIR)/%.s, $(BUILD_DIR)/%.o,$(SRC_DIR)/fastRabbitAVX.s)
+endif
+ifeq ($(SIMD),AVX512)
+OBJ       += $(patsubst $(SRC_DIR)/%.s, $(BUILD_DIR)/%.o,$(SRC_DIR)/fastRabbitAVX512.s)
+endif
 SRC       =  $(wildcard $(SRC_DIR)/*.h $(SRC_DIR)/*.c)
 CPPFLAGS := $(CPPFLAGS) $(DEFINES) $(OPTIONS) $(INCLUDES)
 c := ,
@@ -54,6 +86,18 @@ $(BUILD_DIR)/%.s:  %.c
 	$(info ===>  GENERATE ASM  $@)
 	$(CC) -S $(CPPFLAGS) $(CFLAGS) $< -o $@
 
+$(BUILD_DIR)/%.o:  %.s $(MAKE_DIR)/include_$(TOOLCHAIN).mk config.mk
+	$(info ===>  ASSEMBLE  $@)
+	$(Q)$(CC) -c $< -o $@
+
+# ISPC compilation: .ispc -> .o + generated header
+ifeq ($(ENABLE_ISPC),true)
+$(BUILD_DIR)/fastRabbit.o $(BUILD_DIR)/fastRabbit_ispc.h: $(SRC_DIR)/fastRabbit.ispc | $(BUILD_DIR)
+	$(info ===>  ISPC  $<)
+	$(Q)$(ISPC) $(ISPCFLAGS) $< -o $(BUILD_DIR)/fastRabbit.o -h $(BUILD_DIR)/fastRabbit_ispc.h
+
+$(BUILD_DIR)/LolaISPC.o: $(BUILD_DIR)/fastRabbit_ispc.h
+endif
 
 .PHONY: clean distclean info asm format
 
@@ -64,7 +108,7 @@ clean:
 distclean:
 	$(info ===>  DIST CLEAN)
 	@rm -rf build
-	@rm -f dftbench-*
+	@rm -f rabbitRunner-*
 	@rm -f .clangd compile_commands.json
 
 info:

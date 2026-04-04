@@ -11,18 +11,18 @@ typedef struct {
   int x;
   int y;
   int z;
-} Point3D;
+} Point3DType;
 
 typedef struct {
   int Umin;
   int Umax;
   int Vmin;
   int Vmax;
-} OutShadow;
+} OutShadowType;
 
 typedef struct {
   int16_t start;
   int16_t stop;
-} LineRange;
+} LineRangeType;
 
 #endif /*ANALYSEGEOMETRY_TYPES_H*/

@@ -21,17 +21,21 @@ Results are clustered by problem size (256, 512, or 1024; 128 is not considered
 in the ranking), denoting the edge length of the reconstructed cubic volume in
 voxels.
 
-Two algorithm variants are included in this repository:
+Several algorithm variants are included in this repository:
 
 - **LolaBunny** -- simple reference implementation, straightforward triple-nested loop
 - **LolaOMP** -- optimized implementation with OpenMP parallelization and line-range clipping
+- **LolaOPT** -- further optimized with zero-padded projection images (eliminates bounds checking) and collapse(2) OpenMP scheduling
+- **LolaASM** -- hand-written SIMD assembly kernels (SSE/AVX/AVX512) with cache-blocking
+- **LolaISPC** -- ISPC-vectorized kernel using `foreach` for data-parallel SIMD (requires ISPC compiler)
 
 ## Build
 
 ### Prerequisites
 
 - C compiler: GCC, Clang, or Intel ICX
-- Optional: OpenMP runtime (for the LolaOMP algorithm)
+- Optional: OpenMP runtime (for the LolaOMP/LolaOPT/LolaASM/LolaISPC algorithms)
+- Optional: [Intel ISPC](https://ispc.github.io/) compiler (for the LolaISPC algorithm)
 - Optional: [LIKWID](https://github.com/RRZE-HPC/likwid) (for hardware performance counter measurements)
 
 ### Configuration
@@ -42,6 +46,8 @@ Edit `config.mk` to select your toolchain and features:
 TOOLCHAIN    ?= CLANG          # GCC, CLANG, ICX, NVCC, HIP
 ENABLE_OPENMP ?= false         # set to true for OpenMP support
 ENABLE_LIKWID ?= false         # set to true for LIKWID marker API
+ENABLE_ISPC  ?= false          # set to true for ISPC-vectorized variant
+SIMD         ?= SSE            # SSE, AVX, or AVX512
 ```
 
 Compiler-specific flags are in the `mk/include_<TOOLCHAIN>.mk` files and can be
@@ -61,6 +67,7 @@ Other targets:
 make clean       # remove object files
 make distclean   # remove all build artifacts and the executable
 make asm         # generate assembly listings
+make format      # Reformat all source files (requires a recent clang-format in path)
 ```
 
 ## Usage
@@ -74,21 +81,21 @@ make asm         # generate assembly listings
 | Flag | Argument | Description                                                     |
 | ---- | -------- | --------------------------------------------------------------- |
 | `-i` | filename | Input CT projection data file (`.rct`)                          |
-| `-m` | name     | Algorithm to use: `LolaBunny` or `LolaOMP`                      |
+| `-m` | name     | Algorithm to use (run with `-h` to list available)              |
 | `-s` | size     | Problem size (volume dimension): `128`, `256`, `512`, or `1024` |
 
 ### Optional flags
 
-| Flag | Argument | Description                                                |
-| ---- | -------- | ---------------------------------------------------------- |
-| `-a` | filename | Geometry file -- **required for LolaOMP**                  |
-| `-b` | count    | Number of projections to buffer per iteration (default: 1) |
-| `-c` | filename | Reference volume for result verification                   |
-| `-C` | filename | Line clipping data file                                    |
-| `-o` | filename | Write reconstructed volume as raw binary float             |
-| `-p` | filename | Write middle axial slice as 16-bit PGM image               |
-| `-v` |          | Verbose output                                             |
-| `-h` |          | Print help message                                         |
+| Flag | Argument | Description                                                        |
+| ---- | -------- | ------------------------------------------------------------------ |
+| `-a` | filename | Geometry file -- **required for LolaOMP/LolaOPT/LolaASM/LolaISPC** |
+| `-b` | count    | Number of projections to buffer per iteration (default: 1)         |
+| `-c` | filename | Reference volume for result verification                           |
+| `-C` | filename | Line clipping data file                                            |
+| `-o` | filename | Write reconstructed volume as raw binary float                     |
+| `-p` | filename | Write middle axial slice as 16-bit PGM image                       |
+| `-v` |          | Verbose output                                                     |
+| `-h` |          | Print help message                                                 |
 
 ### Problem sizes and voxel resolution
 
@@ -210,7 +217,7 @@ into the volume.
 
 Does not require a geometry file (`-a`).
 
-### LolaOMP (optimized)
+### LolaOMP
 
 An optimized variant that uses OpenMP for thread-level parallelism and
 line-range clipping to skip voxels that do not project onto the detector.
@@ -219,6 +226,27 @@ Requires the geometry file via `-a` to precompute the clipping ranges.
 The z-slices of the volume are distributed across threads with `#pragma omp
 parallel for`. Enable OpenMP in `config.mk` (`ENABLE_OPENMP = true`) for
 multi-threaded execution; without it, LolaOMP runs single-threaded.
+
+### LolaOPT
+
+Builds on LolaOMP with two additional optimizations: the projection image is
+copied into a zero-padded buffer so that bilinear interpolation never needs
+bounds checking, and the z-y loop is collapsed (`collapse(2)`) for better OpenMP
+load balancing. Requires `-a`.
+
+### LolaASM
+
+Uses hand-written SIMD assembly kernels for the inner backprojection loop.
+Separate assembly files are provided for SSE, AVX, and AVX512 instruction sets,
+selected via the `SIMD` option in `config.mk`. Includes cache-blocking for
+improved locality. Requires `-a`.
+
+### LolaISPC
+
+Uses the [Intel ISPC](https://ispc.github.io/) compiler to auto-vectorize the
+inner backprojection loop via ISPC's `foreach` construct. The ISPC target ISA is
+selected automatically based on the `SIMD` setting. Requires `ENABLE_ISPC=true`
+in `config.mk` and the `ispc` compiler in `PATH`. Requires `-a`.
 
 ## Input data
 

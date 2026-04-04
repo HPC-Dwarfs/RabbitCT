@@ -8,12 +8,7 @@
 /* #####   HEADER FILE INCLUDES   ######################################### */
 #include <stdint.h>
 
-#include "analyseGeometry_types.h"
 #include "memoryUtils_types.h"
-#include "rabbitAffinity_types.h"
-#include "rabbitCt.h"
-#include "rabbitNuma_types.h"
-#include "rabbitTimer_types.h"
 
 /* #####   EXPORTED MACROS   ############################################## */
 
