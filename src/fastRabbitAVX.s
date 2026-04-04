@@ -71,11 +71,13 @@ vfmadd213ps ymm0, ymm10, ymm12
 vfmadd213ps ymm1, ymm10, ymm13
 vfmadd213ps ymm2, ymm10, ymm14
 
-# w_inv = 1/w (approximate), then ix = u/w, iy = v/w
-vrcpps ymm3, ymm2
-vmulps ymm4, ymm0, ymm3         # ix
-vmulps ymm5, ymm1, ymm3         # iy
-vmulps ymm6, ymm3, ymm3         # w2_inv = w_inv^2
+# w_inv = 1/w with Newton-Raphson refinement: w_inv *= (2 - w * w_inv)
+vrcpps ymm3, ymm2               # w_inv ~= 1/w (12-bit approx)
+vfnmadd213ps ymm2, ymm3, ymm15  # ymm2 = -(ymm3 * ymm2) + 1.0 = 1 - w*w_inv = err
+vfmadd213ps ymm2, ymm3, ymm3    # ymm2 = ymm3*err + ymm3 = w_inv*(1+err) (refined)
+vmulps ymm4, ymm0, ymm2         # ix = u * w_inv
+vmulps ymm5, ymm1, ymm2         # iy = v * w_inv
+vmulps ymm6, ymm2, ymm2         # w2_inv = w_inv^2
 
 # Integer pixel coords and fractional bilinear weights
 vroundps ymm0, ymm4, 3          # iix = trunc(ix)

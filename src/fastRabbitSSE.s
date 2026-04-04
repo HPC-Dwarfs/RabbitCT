@@ -39,6 +39,11 @@ addps xmm0, xmm12
 mulps xmm1, xmm10
 addps xmm1, xmm13
 rcpps xmm11, xmm2
+mulps xmm2, xmm11            # w * w_inv
+movaps xmm9, xmm15           # 1.0
+subps xmm9, xmm2             # err = 1 - w*w_inv
+mulps xmm9, xmm11            # w_inv * err
+addps xmm11, xmm9            # w_inv += w_inv*err (refined)
 addps xmm10, [r9]
 mulps xmm0, xmm11
 mulps xmm1, xmm11

@@ -116,6 +116,8 @@ pop   rbp
         kxnorw          k5, k5, k5
         vfmadd213ps     u, A0, tmp0
         vrcp14ps        w_inv, w
+        vfnmadd213ps    w, w_inv, one   # w = 1 - w*w_inv = err
+        vfmadd231ps     w_inv, w, w_inv # w_inv += err*w_inv (refined)
         vfmadd213ps     v, A1, tmp1
         vmulps          ix, u, w_inv
         vmulps          iy, v, w_inv
@@ -165,6 +167,8 @@ xor i, i
         vfmadd213ps     u, A0, tmp0
         mov             r10, VOL
         vrcp14ps        w_inv, w
+        vfnmadd213ps    w, w_inv, one   # w = 1 - w*w_inv = err
+        vfmadd231ps     w_inv, w, w_inv # w_inv += err*w_inv (refined)
         lea             r11, [r9]
         vfmadd213ps     v, A1, tmp1
         add             i, 16

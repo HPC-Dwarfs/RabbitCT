@@ -53,6 +53,8 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# project specific files
 config.mk
 /.cache/clangd/index
 /compile_commands.json
@@ -63,3 +65,4 @@ config.mk
 *.rctd
 *.png
 .clangd
+fastRabbit_ispc.h

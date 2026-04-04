@@ -92,11 +92,18 @@ $(BUILD_DIR)/%.o:  %.s $(MAKE_DIR)/include_$(TOOLCHAIN).mk config.mk
 
 # ISPC compilation: .ispc -> .o + generated header
 ifeq ($(ENABLE_ISPC),true)
-$(BUILD_DIR)/fastRabbit.o $(BUILD_DIR)/fastRabbit_ispc.h: $(SRC_DIR)/fastRabbit.ispc | $(BUILD_DIR)
+$(BUILD_DIR)/fastRabbit.o $(BUILD_DIR)/fastRabbit_ispc.h: $(SRC_DIR)/fastRabbit.ispc $(MAKE_DIR)/include_$(TOOLCHAIN).mk config.mk
+
 	$(info ===>  ISPC  $<)
-	$(Q)$(ISPC) $(ISPCFLAGS) $< -o $(BUILD_DIR)/fastRabbit.o -h $(BUILD_DIR)/fastRabbit_ispc.h
+	$(ISPC) $(ISPCFLAGS) $< -o $(BUILD_DIR)/fastRabbit.o -h $(BUILD_DIR)/fastRabbit_ispc.h
+
+$(BUILD_DIR)/fastRabbit.s: $(SRC_DIR)/fastRabbit.ispc
+	$(info ===>  ISPC ASM  $<)
+	$(Q)$(ISPC) $(ISPCFLAGS) --emit-asm $< -o $@
 
 $(BUILD_DIR)/LolaISPC.o: $(BUILD_DIR)/fastRabbit_ispc.h
+$(BUILD_DIR)/LolaISPC.s: $(BUILD_DIR)/fastRabbit_ispc.h
+ASM += $(BUILD_DIR)/fastRabbit.s
 endif
 
 .PHONY: clean distclean info asm format
