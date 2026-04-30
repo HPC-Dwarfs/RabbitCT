@@ -204,5 +204,7 @@ fastrabbit:
 
 #ifndef __APPLE__
     .size fastrabbit, .-fastrabbit
+
+    .section .note.GNU-stack,"",%progbits
 #endif
 

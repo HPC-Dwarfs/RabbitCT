@@ -117,3 +117,6 @@ mov  rsp, rbp
 pop rbp
 ret
 .size fastrabbit, .-fastrabbit
+
+.section .note.GNU-stack,"",@progbits
+

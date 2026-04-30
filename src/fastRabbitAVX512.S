@@ -43,7 +43,7 @@ vpbroadcastd zmm9, eax
 pop   rbp
 
 ## ---- register aliases (match LolaMIC-ASM/src/fastrabbit.S) ---------------
-#define I       rdi
+#define I       rsi
 #define VOL     rcx
 #define N       r8d
 #define A0      zmm0
@@ -256,3 +256,6 @@ xor i, i
         vmovaps         [r10 + r11 * 4], sval
 ret
 .size fastrabbit, .-fastrabbit
+
+.section .note.GNU-stack,"",@progbits
+
