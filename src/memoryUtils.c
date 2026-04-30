@@ -118,11 +118,36 @@ void memoryUtilsZeroPadAllocate(RabbitCtGlobalData *rcgd, ZeroPaddingType *paddi
   sched_getaffinity(0, sizeof(cpu_set_t), &cpuSet);
 #endif
 
-  padding->buffern = (float ***)malloc(numa_info.numberOfNodes * sizeof(float *));
+  padding->buffern         = (float ***)malloc(numa_info.numberOfNodes * sizeof(float **));
+  padding->masterProcessor = (int *)malloc(numa_info.numberOfNodes * sizeof(int));
 
   for (int i = 0; i < numa_info.numberOfNodes; i++) {
-    rabbitAffinity_pinProcess(numa_info.nodes[i].processors[0]);
-    printf("Allocating Node %d on processor %d \n", i, numa_info.nodes[i].processors[0]);
+    int masterCpu = -1;
+
+#ifdef __linux__
+    for (int j = 0; j < numa_info.nodes[i].numberOfProcessors; j++) {
+      int cpu = numa_info.nodes[i].processors[j];
+      if (CPU_ISSET(cpu, &cpuSet)) {
+        masterCpu = cpu;
+        break;
+      }
+    }
+#else
+    if (numa_info.nodes[i].numberOfProcessors > 0) {
+      masterCpu = numa_info.nodes[i].processors[0];
+    }
+#endif
+
+    if (masterCpu < 0) {
+      padding->buffern[i]         = NULL;
+      padding->masterProcessor[i] = -1;
+      printf("Skipping NUMA node %d (no processors in affinity mask)\n", i);
+      continue;
+    }
+
+    padding->masterProcessor[i] = masterCpu;
+    rabbitAffinity_pinProcess(masterCpu);
+    printf("Allocating Node %d on processor %d \n", i, masterCpu);
 
     padding->buffern[i] = (float **)malloc(rcgd->numberOfProjections * sizeof(float *));
 
@@ -156,7 +181,10 @@ void memoryUtilsZeroPadEnterExp(
   int myProcessorId = rabbitAffinity_threadGetProcessorId();
 
   for (int i = 0; i < numa_info.numberOfNodes; i++) {
-    if (myProcessorId == numa_info.nodes[i].processors[0]) {
+    if (padding->masterProcessor[i] < 0) {
+      continue;
+    }
+    if (myProcessorId == padding->masterProcessor[i]) {
       myNode = i;
       break;
     } else {

@@ -18,6 +18,7 @@ typedef struct {
   int lineOffset;
   int lineSize;
   float **savePtr;
+  int *masterProcessor;
 } ZeroPaddingType;
 
 #endif /*MEMORYUTILS_TYPES_H*/
