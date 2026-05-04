@@ -9,7 +9,6 @@
 #include <string.h>
 
 #include <analyseGeometry.h>
-#include <memoryUtils.h>
 #include <rabbitCt.h>
 #include <rabbitHelper_types.h>
 
@@ -17,7 +16,9 @@ extern void fastrabbit(
     float **, const float *, float **, float *, float *, float *, float *, int);
 
 static int Init = 0;
-static ZeroPaddingType Padding;
+static int PaddedSize;
+static int StartOffset;
+static int LineOffset;
 static LineRangeType **Range;
 static float **PaddedImgs;
 
@@ -38,22 +39,33 @@ int lolaAsmPrepare(RabbitCtGlobalData *rcgd)
         rcgd->problemSize * rcgd->problemSize * sizeof(LineRangeType));
   }
 
-  memoryUtilsInit();
   computeShadowOfProjection(rcgd, &shadow);
   computeLineRanges(rcgd, Range);
 
-  Padding.extend.Umin = abs(shadow.Umin);
-  Padding.extend.Umax = abs(shadow.Umax) - rcgd->imageWidth;
-  Padding.extend.Vmin = abs(shadow.Vmin);
-  Padding.extend.Vmax = abs(shadow.Vmax) - rcgd->imageHeight;
+  int padXl = abs(shadow.Umin);
+  int padXr = abs(shadow.Umax) - rcgd->imageWidth;
+  int padYb = abs(shadow.Vmin);
+  int padYt = abs(shadow.Vmax) - rcgd->imageHeight;
 
-  printf("Padding\n");
-  printf("bottom:%d \n", Padding.extend.Vmin);
-  printf("top: %d \n", Padding.extend.Vmax);
-  printf("left: %d \n", Padding.extend.Umin);
-  printf("right: %d \n", Padding.extend.Umax);
+  /* Align all four pad widths to VECTORSIZE so that the padded image stride
+   * (xSize) and the start of valid image data are vector-aligned for the
+   * fastrabbit kernel's aligned loads. */
+  int align;
+  if ((align = padYb % VECTORSIZE)) padYb += VECTORSIZE - align;
+  if ((align = padXl % VECTORSIZE)) padXl += VECTORSIZE - align;
+  if ((align = padXr % VECTORSIZE)) padXr += VECTORSIZE - align;
+  if ((align = padYt % VECTORSIZE)) padYt += VECTORSIZE - align;
 
-  memoryUtilsZeroPadInit(rcgd, &Padding);
+  int xSize   = padXl + rcgd->imageWidth + padXr;
+  int ySize   = padYb + rcgd->imageHeight + padYt;
+  PaddedSize  = xSize * ySize;
+  StartOffset = padYb * xSize + padXl;
+  LineOffset  = xSize;
+
+  printf("Padding (aligned to %d): bottom=%d top=%d left=%d right=%d\n",
+      VECTORSIZE, padYb, padYt, padXl, padXr);
+  printf("Padded size: %d x %d (startOffset=%d, lineOffset=%d)\n",
+      xSize, ySize, StartOffset, LineOffset);
 
 #ifdef SIMD_NAME
   printf("SIMD instruction set: %s (vector width: %d)\n", SIMD_NAME, VECTORSIZE);
@@ -84,11 +96,11 @@ int lolaAsmBackprojection(RabbitCtGlobalData *rcgd)
     }
     for (int j = 0; j < rcgd->numberOfProjections; j++) {
       if (posix_memalign((void **)&PaddedImgs[j], 64,
-              Padding.paddedSize * sizeof(float)) != 0) {
+              PaddedSize * sizeof(float)) != 0) {
         perror("posix_memalign");
         exit(EXIT_FAILURE);
       }
-      memset(PaddedImgs[j], 0, Padding.paddedSize * sizeof(float));
+      memset(PaddedImgs[j], 0, PaddedSize * sizeof(float));
     }
     Init = 1;
   }
@@ -97,20 +109,20 @@ int lolaAsmBackprojection(RabbitCtGlobalData *rcgd)
   {
     Projection *projectionBuffer =
         (Projection *)malloc(rcgd->numberOfProjections * sizeof(Projection));
-    int imageWidth = Padding.lineOffset;
+    int imageWidth = LineOffset;
 
 #pragma omp for schedule(static)
     for (int j = 0; j < rcgd->numberOfProjections; j++) {
-      float *cursor = PaddedImgs[j] + Padding.startOffset;
+      float *cursor = PaddedImgs[j] + StartOffset;
       for (int i = 0; i < rcgd->imageHeight; i++) {
-        memcpy(cursor + (i * Padding.lineOffset),
+        memcpy(cursor + (i * LineOffset),
             rcgd->projectionBuffer[j].image + (i * rcgd->imageWidth),
             rcgd->imageWidth * sizeof(float));
       }
     }
 
     for (int j = 0; j < rcgd->numberOfProjections; j++) {
-      projectionBuffer[j].image  = PaddedImgs[j] + Padding.startOffset;
+      projectionBuffer[j].image  = PaddedImgs[j] + StartOffset;
       projectionBuffer[j].matrix = rcgd->projectionBuffer[j].matrix;
       projectionBuffer[j].id     = rcgd->projectionBuffer[j].id;
     }

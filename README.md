@@ -129,6 +129,32 @@ Optimized reconstruction with verification and slice output:
   -p slice.pgm
 ```
 
+### OpenMP stack size
+
+OpenMP worker threads do **not** inherit the shell's `ulimit -s` -- they get
+their own stack, sized by the `OMP_STACKSIZE` environment variable, which
+defaults to a small value (typically 4 MiB on libgomp).
+
+For the largest problem size (`-s 1024`), the collapsed parallel loop runs
+over a 1024 x 1024 = 1 048 576 iteration space and the per-thread stack
+demand from runtime bookkeeping plus per-iteration buffers in the SIMD
+variants exceeds that default once thread counts grow into the tens. The
+symptom is a segfault inside `LolaASM` or `LolaISPC` that reproduces only
+above ~16 threads at `-s 1024` and disappears when run sequentially or with
+a few threads.
+
+The fix is to raise the OpenMP stack size before launching:
+
+```bash
+export OMP_STACKSIZE=64M
+./rabbitRunner-CLANG -m LolaASM -s 1024 ...
+```
+
+`run-bench.sh` exports `OMP_STACKSIZE=64M` by default; override it from the
+environment if you need more or want to measure with the libgomp default.
+This setting is harmless for smaller problem sizes and lower thread counts,
+so it is safe to leave on permanently.
+
 ## Output and interpreting results
 
 ### Console output
