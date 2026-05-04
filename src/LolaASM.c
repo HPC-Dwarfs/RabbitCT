@@ -6,6 +6,7 @@
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <analyseGeometry.h>
 #include <memoryUtils.h>
@@ -18,6 +19,7 @@ extern void fastrabbit(
 static int Init = 0;
 static ZeroPaddingType Padding;
 static LineRangeType **Range;
+static float **PaddedImgs;
 
 int lolaAsmPrepare(RabbitCtGlobalData *rcgd)
 {
@@ -75,7 +77,19 @@ int lolaAsmBackprojection(RabbitCtGlobalData *rcgd)
 
   if (!Init) {
     printf("Allocating Padded Images\n");
-    memoryUtilsZeroPadAllocate(rcgd, &Padding);
+    PaddedImgs = (float **)malloc(rcgd->numberOfProjections * sizeof(float *));
+    if (PaddedImgs == NULL) {
+      perror("malloc");
+      exit(EXIT_FAILURE);
+    }
+    for (int j = 0; j < rcgd->numberOfProjections; j++) {
+      if (posix_memalign((void **)&PaddedImgs[j], 64,
+              Padding.paddedSize * sizeof(float)) != 0) {
+        perror("posix_memalign");
+        exit(EXIT_FAILURE);
+      }
+      memset(PaddedImgs[j], 0, Padding.paddedSize * sizeof(float));
+    }
     Init = 1;
   }
 
@@ -84,7 +98,22 @@ int lolaAsmBackprojection(RabbitCtGlobalData *rcgd)
     Projection *projectionBuffer =
         (Projection *)malloc(rcgd->numberOfProjections * sizeof(Projection));
     int imageWidth = Padding.lineOffset;
-    memoryUtilsZeroPadEnterExp(rcgd, &Padding, projectionBuffer);
+
+#pragma omp for schedule(static)
+    for (int j = 0; j < rcgd->numberOfProjections; j++) {
+      float *cursor = PaddedImgs[j] + Padding.startOffset;
+      for (int i = 0; i < rcgd->imageHeight; i++) {
+        memcpy(cursor + (i * Padding.lineOffset),
+            rcgd->projectionBuffer[j].image + (i * rcgd->imageWidth),
+            rcgd->imageWidth * sizeof(float));
+      }
+    }
+
+    for (int j = 0; j < rcgd->numberOfProjections; j++) {
+      projectionBuffer[j].image  = PaddedImgs[j] + Padding.startOffset;
+      projectionBuffer[j].matrix = rcgd->projectionBuffer[j].matrix;
+      projectionBuffer[j].id     = rcgd->projectionBuffer[j].id;
+    }
 #pragma omp barrier
 
 #pragma omp for schedule(runtime)

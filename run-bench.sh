@@ -10,6 +10,11 @@ INPUT="./RabbitInput/RabbitInput.rct"
 GEOMETRY="./RabbitInput/RabbitGeometry.rct"
 VARIANT="LolaOMP"
 
+# OMP worker threads inherit OMP_STACKSIZE, not the process ulimit. The
+# default is too small for the L=1024 collapsed parallel-for at high thread
+# counts and causes segfaults in LolaASM and LolaISPC.
+export OMP_STACKSIZE="${OMP_STACKSIZE:-64M}"
+
 usage() {
     echo "Usage: $0 -s <size> [-v <variant>] [-n <numProc>] [-o <outfile>]"
     echo ""
