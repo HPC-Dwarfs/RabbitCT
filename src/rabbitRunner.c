@@ -46,11 +46,11 @@
   }                                                                                      \
   rabbitTimer_startCycles(&cycleData);                                                   \
   call;                                                                                  \
-  rabbitTimer_stopCycles(&cycleData);
-_Pragma("omp parallel")
-{
-  LIKWID_MARKER_STOP("LOLA");
-}
+  rabbitTimer_stopCycles(&cycleData);                                                    \
+  _Pragma("omp parallel")                                                                \
+  {                                                                                      \
+    LIKWID_MARKER_STOP("LOLA");                                                          \
+  }
 #else /* LIKWID_PERFMON */
 #define PROFILE(call)                                                                    \
   rabbitTimer_startCycles(&cycleData);                                                   \
