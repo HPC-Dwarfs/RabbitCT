@@ -75,15 +75,9 @@ int lolaOptPrepare(RabbitCtGlobalData *rcgd)
     perror("malloc");
     exit(EXIT_FAILURE);
   }
-  for (int i = 0; i < xSize * ySize; ++i)
-    PaddedImg[i] = 0.0f;
 
-  /* The thread init for the marker must only be called once by each thread,
-     * which is why we do it here. (lolaOptBackprojection() is called
-     * multiple times, so we can't do it there.) */
-#pragma omp parallel
-  {
-    LIKWID_MARKER_THREADINIT;
+  for (int i = 0; i < xSize * ySize; ++i) {
+    PaddedImg[i] = 0.0f;
   }
 
   return 1;
@@ -147,8 +141,6 @@ int lolaOptBackprojection(RabbitCtGlobalData *rcgd)
           tmp[1] = (float)(a[4] * wy + a[7] * wz + a[10]);
           tmp[2] = (float)(a[5] * wy + a[8] * wz + a[11]);
 
-          LIKWID_MARKER_START("fastrabbit");
-
           for (int x = start; x < stop; ++x) {
             float u     = tmp[0] + wx * a[0];
             float v     = tmp[1] + wx * a[1];
@@ -179,7 +171,6 @@ int lolaOptBackprojection(RabbitCtGlobalData *rcgd)
 
             vol[offset + x] += wval;
           }
-
         } // y-loop
       } // z-loop
     } // projection loop

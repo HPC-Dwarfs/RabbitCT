@@ -66,12 +66,8 @@ int lolaIspcPrepare(RabbitCtGlobalData *rcgd)
     perror("malloc");
     exit(EXIT_FAILURE);
   }
-  for (int i = 0; i < xSize * ySize; ++i)
+  for (int i = 0; i < xSize * ySize; ++i) {
     PaddedImg[i] = 0.0f;
-
-#pragma omp parallel
-  {
-    LIKWID_MARKER_THREADINIT;
   }
 
   return 1;
@@ -84,12 +80,12 @@ int lolaIspcFinish(RabbitCtGlobalData *rcgd)
 
 int lolaIspcBackprojection(RabbitCtGlobalData *rcgd)
 {
-  const int l    = rcgd->problemSize;
-  const int numP = rcgd->numberOfProjections;
-  const float mm = rcgd->voxelSize;
+  const int l            = rcgd->problemSize;
+  const int numP         = rcgd->numberOfProjections;
+  const float mm         = rcgd->voxelSize;
   const float imageWidth = Padding.lineOffset;
 
-  float *vol = rcgd->volumeData;
+  float *vol             = rcgd->volumeData;
 
 #pragma omp parallel
   {
@@ -116,12 +112,12 @@ int lolaIspcBackprojection(RabbitCtGlobalData *rcgd)
           if (stop - start == 0)
             continue;
 
-          float wz = z * mm + rcgd->O_Index;
-          float wy = y * mm + rcgd->O_Index;
+          float wz            = z * mm + rcgd->O_Index;
+          float wy            = y * mm + rcgd->O_Index;
 
-          float a0 = a[0];
-          float a1 = a[1];
-          float a2 = a[2];
+          float a0            = a[0];
+          float a1            = a[1];
+          float a2            = a[2];
 
           unsigned int offset = z * l * l + y * l;
 
@@ -131,13 +127,19 @@ int lolaIspcBackprojection(RabbitCtGlobalData *rcgd)
           float tmpV = (float)(a[4] * wy + a[7] * wz + a[10]);
           float tmpW = (float)(a[5] * wy + a[8] * wz + a[11]);
 
-          LIKWID_MARKER_START("fastrabbit");
-
-          Backprojection(start, stop, mm, imageWidth,
-              a0, a1, a2, tmpU, tmpV, tmpW, rcgd->O_Index,
-              vol + offset, img);
-
-          LIKWID_MARKER_STOP("fastrabbit");
+          Backprojection(start,
+              stop,
+              mm,
+              imageWidth,
+              a0,
+              a1,
+              a2,
+              tmpU,
+              tmpV,
+              tmpW,
+              rcgd->O_Index,
+              vol + offset,
+              img);
 
 #ifdef KERNEL_CYCLES
           if ((stop - start) != l)
@@ -146,13 +148,24 @@ int lolaIspcBackprojection(RabbitCtGlobalData *rcgd)
             CyclesData cycleData;
             rabbitTimer_startCycles(&cycleData);
 
-            Backprojection(start, stop, mm, imageWidth,
-                a0, a1, a2, tmpU, tmpV, tmpW, rcgd->O_Index,
-                vol + offset, img);
+            Backprojection(start,
+                stop,
+                mm,
+                imageWidth,
+                a0,
+                a1,
+                a2,
+                tmpU,
+                tmpV,
+                tmpW,
+                rcgd->O_Index,
+                vol + offset,
+                img);
 
             rabbitTimer_stopCycles(&cycleData);
             printf("cycles for one line (%d voxels)/one voxel: "
-                "%llu / %f\n", (stop - start),
+                   "%llu / %f\n",
+                stop - start,
                 LLU_CAST rabbitTimer_printCycles(&cycleData),
                 (float)rabbitTimer_printCycles(&cycleData) / (stop - start));
           }

@@ -38,6 +38,26 @@
   printf("-m\t algorithm name\n\n");                                                     \
   algorithmRegistryList()
 
+#ifdef LIKWID_PERFMON
+#define PROFILE(call)                                                                    \
+  _Pragma("omp parallel")                                                                \
+  {                                                                                      \
+    LIKWID_MARKER_START("LOLA");                                                         \
+  }                                                                                      \
+  rabbitTimer_startCycles(&cycleData);                                                   \
+  call;                                                                                  \
+  rabbitTimer_stopCycles(&cycleData);
+_Pragma("omp parallel")
+{
+  LIKWID_MARKER_STOP("LOLA");
+}
+#else /* LIKWID_PERFMON */
+#define PROFILE(call)                                                                    \
+  rabbitTimer_startCycles(&cycleData);                                                   \
+  call;                                                                                  \
+  rabbitTimer_stopCycles(&cycleData);
+#endif /* LIKWID_PERFMON */
+
 static float volumeResolution(const int problemSize)
 {
   float rv = 0.0f;
@@ -151,6 +171,10 @@ int main(int argc, char **argv)
   printf("\n");
 
   LIKWID_MARKER_INIT;
+  _Pragma("omp parallel")
+  {
+    LIKWID_MARKER_REGISTER("LOLA");
+  }
   rabbitTimer_init();
 
   /********************************************************
@@ -197,10 +221,7 @@ int main(int argc, char **argv)
    * *****************************************************/
   if (FncPrepareAlgorithm != NULL) {
     CyclesDataType cycleData;
-
-    rabbitTimer_startCycles(&cycleData);
-    FncPrepareAlgorithm(&data);
-    rabbitTimer_stopCycles(&cycleData);
+    PROFILE(FncPrepareAlgorithm(&data))
 
     if (optVerbose) {
       printf("Prepare Algorithm Timing: %g sec\n",
