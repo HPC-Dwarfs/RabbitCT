@@ -221,7 +221,9 @@ int main(int argc, char **argv)
    * *****************************************************/
   if (FncPrepareAlgorithm != NULL) {
     CyclesDataType cycleData;
-    PROFILE(FncPrepareAlgorithm(&data))
+    rabbitTimer_startCycles(&cycleData);
+    FncPrepareAlgorithm(&data);
+    rabbitTimer_stopCycles(&cycleData);
 
     if (optVerbose) {
       printf("Prepare Algorithm Timing: %g sec\n",
@@ -274,9 +276,7 @@ int main(int argc, char **argv)
         data.projectionBuffer[i].id = ctFileReaderReadImage(
             &inputFile, data.projectionBuffer[i].matrix, data.projectionBuffer[i].image);
       }
-      rabbitTimer_startCycles(&cycleData);
-      FncAlgorithmIteration(&data);
-      rabbitTimer_stopCycles(&cycleData);
+      PROFILE(FncAlgorithmIteration(&data))
       time += rabbitTimer_printCyclesTime(&cycleData);
 
       counter -= bufferSize;
