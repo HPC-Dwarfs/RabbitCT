@@ -51,6 +51,10 @@ else
 OBJ       := $(filter-out $(BUILD_DIR)/LolaISPC.o,$(OBJ))
 endif
 
+ifeq ($(ENABLE_CUDA),true)
+OBJ       += $(patsubst $(SRC_DIR)/%.cu, $(BUILD_DIR)/%.o,$(wildcard $(SRC_DIR)/*.cu))
+endif
+
 # Select assembly kernel matching the SIMD option.
 # SSE/AVX/AVX512 require x86-64; NEON requires AARCH64.
 ARCH := $(shell uname -m)
@@ -94,6 +98,11 @@ ${TARGET}: $(BUILD_DIR) .clangd $(OBJ) $(DATA_DIR)
 	$(Q)${LD} ${LFLAGS} -o $(TARGET) $(OBJ) $(LIBS)
 
 $(BUILD_DIR)/%.o:  %.c $(MAKE_DIR)/include_$(TOOLCHAIN).mk config.mk
+	$(info ===>  COMPILE  $@)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+	$(Q)$(CC) $(CPPFLAGS) -MT $(@:.d=.o) -MM  $< > $(BUILD_DIR)/$*.d
+
+$(BUILD_DIR)/%.o:  %.cu $(MAKE_DIR)/include_$(TOOLCHAIN).mk config.mk
 	$(info ===>  COMPILE  $@)
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
 	$(Q)$(CC) $(CPPFLAGS) -MT $(@:.d=.o) -MM  $< > $(BUILD_DIR)/$*.d

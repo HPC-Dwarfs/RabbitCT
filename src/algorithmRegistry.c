@@ -30,6 +30,16 @@ extern int lolaIspcBackprojection(RabbitCtGlobalData *);
 extern int lolaIspcFinish(RabbitCtGlobalData *);
 #endif
 
+#ifdef ENABLE_CUDA
+extern int lolaCudaPrepare(RabbitCtGlobalData *);
+extern int lolaCudaBackprojection(RabbitCtGlobalData *);
+extern int lolaCudaFinish(RabbitCtGlobalData *);
+
+extern int lolaCudaTexPrepare(RabbitCtGlobalData *);
+extern int lolaCudaTexBackprojection(RabbitCtGlobalData *);
+extern int lolaCudaTexFinish(RabbitCtGlobalData *);
+#endif
+
 /* ---- global function pointer variables ---- */
 FncPrepareAlgorithmType FncPrepareAlgorithm;
 FncAlgorithmIterationType FncAlgorithmIteration;
@@ -43,6 +53,10 @@ static const AlgorithmEntryType S_ALGORITHMS[] = {
   { "LolaASM",   lolaAsmPrepare,   lolaAsmBackprojection,   lolaAsmFinish   },
 #ifdef ENABLE_ISPC
   { "LolaISPC",  lolaIspcPrepare,  lolaIspcBackprojection,  lolaIspcFinish  },
+#endif
+#ifdef ENABLE_CUDA
+  { "LolaCUDA",  lolaCudaPrepare,  lolaCudaBackprojection,  lolaCudaFinish  },
+  { "LolaCUDATex", lolaCudaTexPrepare, lolaCudaTexBackprojection, lolaCudaTexFinish  },
 #endif
   { NULL,        NULL,             NULL,                    NULL            }  /* sentinel */
 };
