@@ -11,13 +11,9 @@ OPENMP   = -Xcompiler "-fopenmp"
 endif
 
 VERSION  = --version
-CFLAGS   = -O3 -g -std=c99 $(OPENMP)
+CFLAGS   = -O3 -std=c++17 $(CUDA_ARCH) $(OPENMP)
 LFLAGS   = $(OPENMP) -lm $(CUDA_ARCH)
 
-# NVCC flags — host compiler options passed via -Xcompiler
-# CUDA_ARCH ?= sm_80
-NVCCFLAGS = -O3 -g $(CUDA_ARCH) -Xcompiler "$(OPENMP)"
-
-DEFINES  += -D_GNU_SOURCE -DRUNTIME_BACKEND_IS_CUDA
+DEFINES  +=  -DENABLE_CUDA -D_GNU_SOURCE -DRUNTIME_BACKEND_IS_CUDA
 INCLUDES  =
 LIBS      = -lcudart -lm
