@@ -56,7 +56,7 @@ endef
 
 ${TARGET}: $(BUILD_DIR) .clangd $(OBJ) $(DATA_DIR)
 	$(info ===>  LINKING  $(TARGET))
-	${LD} ${LFLAGS} -o $(TARGET) $(OBJ) $(LIBS)
+	$(Q)${LD} ${LFLAGS} -o $(TARGET) $(OBJ) $(LIBS)
 
 $(BUILD_DIR)/%.o:  %.c $(MAKE_DIR)/include_$(TOOLCHAIN).mk config.mk
 	$(info ===>  COMPILE  $@)
