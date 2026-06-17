@@ -11,8 +11,10 @@ MAKE_DIR   = ./mk
 Q         ?= @
 
 #DO NOT EDIT BELOW
-ifneq ($(shell printf '%s\n' 4.4 "$(MAKE_VERSION)" | sort -V | head -1),4.4)
-$(error GNU make > 4.3 is required (found $(MAKE_VERSION)). Please upgrade or use homebrew GNU make on Macs.)
+ifeq ($(shell printf '%s\n' 4.4 "$(MAKE_VERSION)" | sort -V | head -1),4.4)
+MAKE_GE_44 := true
+else
+MAKE_GE_44 := false
 endif
 ifeq (,$(wildcard config.mk))
 $(info )
@@ -26,16 +28,26 @@ $(shell cp ./mk/config-default.mk config.mk)
 $(error Stopping after creating config.mk - please review and run make again)
 endif
 include config.mk
+ifeq ($(ENABLE_ISPC),true)
+ifneq ($(MAKE_GE_44),true)
+$(info NOTE: ENABLE_ISPC requires GNU make > 4.3 (found $(MAKE_VERSION)). Disabling ISPC support.)
+override ENABLE_ISPC := false
+endif
+endif
 include $(MAKE_DIR)/include_$(TOOLCHAIN).mk
 include $(MAKE_DIR)/include_LIKWID.mk
 INCLUDES  += -I$(SRC_DIR)/includes -I$(SRC_DIR) -I$(BUILD_DIR)
 
 VPATH     = $(SRC_DIR)
 ASM       = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.s,$(wildcard $(SRC_DIR)/*.c))
+ifeq ($(ENABLE_ISPC),true)
 ASM       += $(patsubst $(SRC_DIR)/%.ispc, $(BUILD_DIR)/%.s,$(wildcard $(SRC_DIR)/*.ispc))
+endif
 OBJ       = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o,$(wildcard $(SRC_DIR)/*.c))
 OBJ       += $(patsubst $(SRC_DIR)/%.S, $(BUILD_DIR)/%.o,$(SRC_DIR)/fastRabbit$(SIMD).S)
+ifeq ($(ENABLE_ISPC),true)
 OBJ       += $(patsubst $(SRC_DIR)/%.ispc, $(BUILD_DIR)/%.o,$(wildcard $(SRC_DIR)/*.ispc))
+endif
 include $(MAKE_DIR)/include_ISPC.mk
 SRC       =  $(wildcard $(SRC_DIR)/*.h $(SRC_DIR)/*.c)
 CPPFLAGS := $(CPPFLAGS) $(DEFINES) $(OPTIONS) $(INCLUDES)
@@ -76,6 +88,7 @@ $(BUILD_DIR)/%.o:  %.S $(MAKE_DIR)/include_$(TOOLCHAIN).mk config.mk
 	$(info ===>  ASSEMBLE  $@)
 	$(CC) -c $(CPPFLAGS) $< -o $@
 
+ifeq ($(ENABLE_ISPC),true)
 $(BUILD_DIR)/%.o $(BUILD_DIR)/%_ispc.h &: %.ispc $(MAKE_DIR)/include_$(TOOLCHAIN).mk config.mk
 	$(info ===>  ISPC  $<)
 	$(ISPC) $(ISPCFLAGS) $< -o $(BUILD_DIR)/$*.o -h $(BUILD_DIR)/$*_ispc.h
@@ -83,6 +96,7 @@ $(BUILD_DIR)/%.o $(BUILD_DIR)/%_ispc.h &: %.ispc $(MAKE_DIR)/include_$(TOOLCHAIN
 $(BUILD_DIR)/%.s: %.ispc
 	$(info ===>  ISPC ASM  $<)
 	$(ISPC) $(ISPCFLAGS) --emit-asm $< -o $@
+endif
 
 .PHONY: clean distclean info asm format
 
@@ -115,6 +129,8 @@ $(BUILD_DIR):
 .clangd:
 	$(file > .clangd,$(CLANGD_TEMPLATE))
 
+ifeq ($(ENABLE_ISPC),true)
 $(BUILD_DIR)/LolaISPC.o: $(BUILD_DIR)/fastRabbit_ispc.h
+endif
 
 -include $(OBJ:.o=.d)
