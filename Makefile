@@ -55,6 +55,9 @@ CPPFLAGS := $(CPPFLAGS) $(DEFINES) $(OPTIONS) $(INCLUDES)
 ifneq (,$(filter $(TOOLCHAIN),NVCC HIP))
   CPPFLAGS += -D_GPU
   OBJ   += $(patsubst $(SRC_DIR)/%.cu, $(BUILD_DIR)/%.o,$(wildcard $(SRC_DIR)/*.cu))
+ifneq ($(ENABLE_CUDA_TEX),true)
+  OBJ   := $(filter-out $(BUILD_DIR)/LolaCUDATex.o,$(OBJ))
+endif
 endif
 
 c := ,
@@ -76,8 +79,8 @@ $(BUILD_DIR)/%.o:  %.c $(MAKE_DIR)/include_$(TOOLCHAIN).mk config.mk
 	$(Q)$(CC) $(CPPFLAGS) -MT $(@:.d=.o) -MM  $< > $(BUILD_DIR)/$*.d
 
 $(BUILD_DIR)/%.o: %.cu $(MAKE_DIR)/include_$(TOOLCHAIN).mk config.mk
-	$(info ===>  COMPILE CUDA $@)
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+	$(info ===>  COMPILE  $@)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(NVCCFLAGS) $< -o $@
 	$(Q)$(CC) $(CPPFLAGS) -MT $(@:.d=.o) -MM  $< > $(BUILD_DIR)/$*.d
 
 $(BUILD_DIR)/%.s:  %.c
